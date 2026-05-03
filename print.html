@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kammerkoret Richters Skala</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { -webkit-font-smoothing: antialiased; font-family: 'EB Garamond', Georgia, serif; background: #0d0d0b; }
+  img { display: block; max-width: 100%; }
+  a { text-decoration: none; color: inherit; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page-break { break-before: page; }
+    .no-break { break-inside: avoid; }
+  }
+
+  .page {
+    width: 297mm;
+    min-height: 210mm;
+    overflow: hidden;
+    position: relative;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+/* ─── DATA ─────────────────────────────────────────────── */
+const EVENTS = [
+  { id:1, day:'17', month:'maj 2025',  time:'19:30', title:'Stemmer i hvælvet',    venue:'Vor Frue Kirke, København',   type:'Forårskoncert',      soldOut:false, price:'kr. 180' },
+  { id:2, day:'14', month:'jun 2025',  time:'20:00', title:'Nordiske klange',      venue:'Ny Carlsberg Glyptotek',      type:'Sommerkoncert',      soldOut:false, price:'kr. 200' },
+  { id:3, day:'21', month:'sep 2025',  time:'19:00', title:'Mørk er november',     venue:'Roskilde Domkirke',           type:'Efterårskoncert',    soldOut:false, price:'kr. 160' },
+  { id:4, day:'2',  month:'nov 2025',  time:'17:00', title:'Allehelgensaften',      venue:'Sankt Petri Kirke',           type:'Allehelgenskoncert', soldOut:true,  price:'kr. 180' },
+  { id:5, day:'20', month:'dec 2025',  time:'19:30', title:'Fra Mørket til Lyset', venue:'Frederiksborg Slotskirke',    type:'Julekoncert',        soldOut:false, price:'kr. 220' },
+];
+
+const PHOTOS = [
+  { src:'assets/photo-choir-museum.jpg',  caption:'Ny Carlsberg Glyptotek, 2024' },
+  { src:'assets/photo-singers-dark.jpg',  caption:'Vor Frue Kirke, 2024' },
+  { src:'assets/photo-conductor.jpg',     caption:'Dirigent Laus Richter Larsen' },
+  { src:'assets/photo-choir-church.jpg',  caption:'Roskilde Domkirke, 2023' },
+  { src:'assets/photo-choir-full.jpg',    caption:'Koncertsalen, 2024' },
+  { src:'assets/photo-choir-singing.jpg', caption:'Frederiksborg Slotskirke, 2023' },
+  { src:'assets/photo-candles.jpg',       caption:'Julekoncert, 2024' },
+];
+
+const RECORDINGS = [
+  { title:'Lux Aurumque',            composer:'Eric Whitacre',     duration:'4:12', year:'2024', concert:'Mørk er november' },
+  { title:'Northern Lights',         composer:'Ola Gjeilo',         duration:'5:48', year:'2024', concert:'Nordiske klange' },
+  { title:'Cantique de Jean Racine', composer:'Gabriel Fauré',      duration:'6:03', year:'2023', concert:'Allehelgensaften' },
+  { title:'Stars',                   composer:'Eriks Ešenvalds',    duration:'7:21', year:'2023', concert:'Nordiske klange' },
+  { title:'Herr, wenn ich nur dich habe', composer:'Heinrich Schütz', duration:'3:55', year:'2024', concert:'Mørk er november' },
+  { title:'O Magnum Mysterium',      composer:'Morten Lauridsen',   duration:'5:14', year:'2024', concert:'Fra Mørket til Lyset' },
+];
+
+const SPONSORS = [
+  { name:'Brebølfonden', tier:'Sæsonpartner' },
+  { name:'Frederiksbergfonden', tier:'Sæsonpartner' },
+  { name:'William Demant Fonden', tier:'Projektpartner' },
+  { name:"Jorck's Fond", tier:'Projektpartner' },
+  { name:'Louis-Hansen Fonden', tier:'Projektpartner' },
+  { name:'Schrøder Fond', tier:'Støtter' },
+  { name:'Dansk Kapelmesterforening', tier:'Støtter' },
+];
+
+/* ─── THEME (fixed: mørk) ──────────────────────────────── */
+const t = {
+  bg: '#0d0d0b', bgAlt: '#2a2825', fg: '#f7f5f0', fgMuted: '#8a8278',
+  fgSub: 'rgba(247,245,240,0.55)', border: '#2a2825', borderLight: '#3a3835',
+  accent: '#c8933a', cardBg: '#1a1917', dark: true,
+};
+
+const Label = ({ children }) => (
+  <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', fontWeight:500,
+    letterSpacing:'0.14em', textTransform:'uppercase', color: t.fgMuted }}>
+    {children}
+  </div>
+);
+
+/* ─── PAGE 1: HERO ─────────────────────────────────────── */
+const HeroPage = () => (
+  <div className="page" style={{ background:'#0d0d0b', position:'relative', display:'flex', flexDirection:'column' }}>
+    <img src="assets/photo-choir-museum.jpg" alt=""
+      style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(0.42)' }} />
+    <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(13,13,11,0.92) 0%, rgba(13,13,11,0.18) 55%, transparent 100%)' }}></div>
+
+    {/* Header */}
+    <div style={{ position:'relative', zIndex:2, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'22px 40px', borderBottom:'1px solid rgba(247,245,240,0.08)' }}>
+      <img src="assets/KRS-logo.jpg" alt="Kammerkoret Richters Skala"
+        style={{ height:'38px', width:'auto', filter:'invert(1) brightness(1.8)' }} />
+      <div style={{ display:'flex', gap:'28px' }}>
+        {['Koncerter','Galleri','Optagelser','Video','Om koret','Støt os','Kontakt'].map(l => (
+          <span key={l} style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500,
+            letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(247,245,240,0.55)' }}>{l}</span>
+        ))}
+      </div>
+    </div>
+
+    {/* Hero content */}
+    <div style={{ position:'relative', zIndex:2, flex:1, display:'flex', flexDirection:'column', justifyContent:'flex-end', padding:'0 48px 52px' }}>
+      <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', fontWeight:500,
+        letterSpacing:'0.15em', textTransform:'uppercase', color:'#c8933a', marginBottom:'14px' }}>
+        Næste koncert
+      </div>
+      <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'72px', fontWeight:300,
+        lineHeight:1.02, letterSpacing:'-0.01em', color:'#f7f5f0', marginBottom:'16px' }}>
+        Stemmer i hvælvet
+      </h1>
+      <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'20px', fontStyle:'italic',
+        lineHeight:1.6, color:'rgba(247,245,240,0.65)', marginBottom:'36px', maxWidth:'500px' }}>
+        Forårskoncert — 17. maj 2025, kl. 19:30<br />Vor Frue Kirke, København
+      </p>
+      <div style={{ display:'flex', gap:'12px' }}>
+        <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', fontWeight:500,
+          letterSpacing:'0.13em', textTransform:'uppercase', background:'#f7f5f0', color:'#0d0d0b', padding:'12px 28px' }}>
+          Køb billetter
+        </div>
+        <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', fontWeight:500,
+          letterSpacing:'0.13em', textTransform:'uppercase', background:'transparent', color:'#f7f5f0',
+          border:'1px solid rgba(247,245,240,0.3)', padding:'12px 28px' }}>
+          Se alle koncerter
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+/* ─── PAGE 2: KONCERTKALENDER ──────────────────────────── */
+const KoncertPage = () => (
+  <div className="page page-break" style={{ background:'#0d0d0b', padding:'40px 48px' }}>
+    <div style={{ marginBottom:'28px', paddingBottom:'16px', borderBottom:`1px solid ${t.border}`, display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
+      <div>
+        <Label>Sæson 2025</Label>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'42px', fontWeight:300,
+          color: t.fg, marginTop:'8px', letterSpacing:'-0.01em' }}>
+          Kommende koncerter
+        </h2>
+      </div>
+      <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'14px', fontStyle:'italic', color: t.fgMuted }}>
+        5 koncerter i 2025
+      </div>
+    </div>
+
+    {EVENTS.map((e, i) => (
+      <div key={e.id} className="no-break" style={{ display:'grid', gridTemplateColumns:'64px 1fr auto',
+        gap:'0 24px', alignItems:'center', padding:'18px 0',
+        borderTop: i === 0 ? 'none' : `1px solid ${t.border}` }}>
+        <div style={{ textAlign:'center', borderRight:`1px solid ${t.border}`, paddingRight:'18px' }}>
+          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'38px', fontWeight:300, lineHeight:1, color: t.accent }}>{e.day}</div>
+          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500,
+            letterSpacing:'0.1em', textTransform:'uppercase', color: t.fgMuted, marginTop:'2px' }}>{e.month}</div>
+        </div>
+        <div style={{ paddingLeft:'4px' }}>
+          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500,
+            letterSpacing:'0.1em', textTransform:'uppercase', color: t.fgMuted, marginBottom:'5px' }}>{e.type}</div>
+          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'22px', fontWeight:400, color: t.fg, lineHeight:1.2 }}>{e.title}</div>
+          <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'14px', fontStyle:'italic', color: t.fgMuted, marginTop:'3px' }}>{e.venue}</div>
+        </div>
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color: t.fgMuted }}>{e.time}</div>
+          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500,
+            letterSpacing:'0.1em', textTransform:'uppercase', color: e.soldOut ? t.fgMuted : t.accent, marginTop:'5px' }}>
+            {e.soldOut ? 'Udsolgt' : e.price}
+          </div>
+        </div>
+      </div>
+    ))}
+    <div style={{ borderTop:`1px solid ${t.border}`, marginTop:'2px' }}></div>
+
+    {/* Contact strip */}
+    <div style={{ marginTop:'32px', display:'flex', alignItems:'center', justifyContent:'space-between',
+      padding:'24px 28px', border:`1px solid ${t.border}` }}>
+      <div>
+        <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500, letterSpacing:'0.12em', textTransform:'uppercase', color: t.accent, marginBottom:'6px' }}>Booking</div>
+        <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'20px', fontWeight:300, color: t.fg }}>info@richtersskala.dk</div>
+      </div>
+      <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'14px', fontStyle:'italic', color: t.fgMuted }}>richtersskala.dk</div>
+    </div>
+  </div>
+);
+
+/* ─── PAGE 3: BILLEDGALLERI ────────────────────────────── */
+const GalleriPage = () => (
+  <div className="page page-break" style={{ background:'#0d0d0b' }}>
+    <div style={{ padding:'32px 48px 20px' }}>
+      <Label>Fotografi</Label>
+      <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'42px', fontWeight:300,
+        color: t.fg, marginTop:'8px', letterSpacing:'-0.01em' }}>
+        Billedgalleri
+      </h2>
+    </div>
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'2px', padding:'0 0 2px' }}>
+      {PHOTOS.map((p, i) => (
+        <div key={i} style={{ position:'relative', aspectRatio:'4/3', overflow:'hidden' }}>
+          <img src={p.src} alt={p.caption}
+            style={{ width:'100%', height:'100%', objectFit:'cover', filter:'brightness(0.75)' }} />
+          <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'10px 12px',
+            background:'linear-gradient(to top, rgba(13,13,11,0.75), transparent)',
+            fontFamily:"'EB Garamond',Georgia,serif", fontSize:'11px', fontStyle:'italic',
+            color:'rgba(247,245,240,0.72)' }}>
+            {p.caption}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/* ─── PAGE 4: OPTAGELSER + VIDEO ───────────────────────── */
+const OptagelserPage = () => (
+  <div className="page page-break" style={{ background:'#0d0d0b', padding:'40px 48px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'48px' }}>
+    {/* Optagelser */}
+    <div>
+      <Label>Lyd</Label>
+      <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'38px', fontWeight:300,
+        color: t.fg, marginTop:'8px', marginBottom:'24px', letterSpacing:'-0.01em' }}>
+        Optagelser
+      </h2>
+      {RECORDINGS.map((r, i) => (
+        <div key={i} className="no-break" style={{ display:'grid', gridTemplateColumns:'32px 1fr auto',
+          gap:'0 14px', alignItems:'center', padding:'13px 0', borderTop:`1px solid ${t.border}` }}>
+          <div style={{ width:'32px', height:'32px', border:`1px solid ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill={t.fgMuted}>
+              <path d="M2 1.5 L11 6 L2 10.5 Z"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'17px', fontWeight:400, color: t.fg }}>{r.title}</div>
+            <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'12px', fontStyle:'italic', color: t.fgMuted, marginTop:'2px' }}>
+              {r.composer} — {r.year}
+            </div>
+          </div>
+          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'11px', color: t.fgMuted }}>{r.duration}</div>
+        </div>
+      ))}
+      <div style={{ borderTop:`1px solid ${t.border}` }}></div>
+    </div>
+
+    {/* Video */}
+    <div>
+      <Label>Video</Label>
+      <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'38px', fontWeight:300,
+        color: t.fg, marginTop:'8px', marginBottom:'24px', letterSpacing:'-0.01em' }}>
+        Koncertoptagelser
+      </h2>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px' }}>
+        {[
+          { title:'Lux Aurumque — Live', year:'2024', duration:'4:12', thumb:'assets/photo-singers-dark.jpg' },
+          { title:'Nordiske klange', year:'2024', duration:'18:40', thumb:'assets/photo-choir-museum.jpg' },
+          { title:'Fra Mørket til Lyset', year:'2024', duration:'54:10', thumb:'assets/photo-candles.jpg' },
+          { title:'Allehelgensaften 2023', year:'2023', duration:'62:00', thumb:'assets/photo-choir-church.jpg' },
+        ].map((v, i) => (
+          <div key={i} style={{ position:'relative', aspectRatio:'16/9', overflow:'hidden' }}>
+            <img src={v.thumb} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'brightness(0.55)' }} />
+            <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <div style={{ width:'36px', height:'36px', border:'1px solid rgba(247,245,240,0.5)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="rgba(247,245,240,0.85)"><path d="M3 2 L14 8 L3 14 Z"/></svg>
+              </div>
+            </div>
+            <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'10px 12px',
+              background:'linear-gradient(to top, rgba(13,13,11,0.85), transparent)' }}>
+              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'13px', color:'#f7f5f0', marginBottom:'3px' }}>{v.title}</div>
+              <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', color:'rgba(247,245,240,0.45)' }}>{v.year} · {v.duration}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+/* ─── PAGE 5: OM KORET ─────────────────────────────────── */
+const OmKoretPage = () => (
+  <div className="page page-break" style={{ background:'#0d0d0b', display:'grid', gridTemplateColumns:'1fr 1fr' }}>
+    <div style={{ overflow:'hidden', position:'relative' }}>
+      <img src="assets/photo-choir-full.jpg" alt=""
+        style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', filter:'brightness(0.62)' }} />
+      <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, transparent, rgba(13,13,11,0.4))' }}></div>
+    </div>
+    <div style={{ padding:'52px 48px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+      <Label>Om koret</Label>
+      <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'38px', fontWeight:300,
+        lineHeight:1.08, color: t.fg, margin:'14px 0 18px', letterSpacing:'-0.01em' }}>
+        Musik med substans<br />og nærvær
+      </h2>
+      <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', lineHeight:1.78,
+        color:'rgba(247,245,240,0.75)', marginBottom:'18px' }}>
+        Kammerkoret Richters Skala er et dansk SATB-kammerkor på 25 sangere med solistisk ansvar og høj musikalsk ambition. Koret specialiserer sig i et bredt repertoire med særlig forkærlighed for nordisk musik.
+      </p>
+      <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', lineHeight:1.78,
+        color:'rgba(247,245,240,0.75)', marginBottom:'28px' }}>
+        Koret er grundlagt og ledes af <em>Laus Richter Larsen</em>, uddannet kordirigent fra Det Kongelige Danske Musikkonservatorium.
+      </p>
+
+      <div style={{ borderTop:`1px solid ${t.border}`, paddingTop:'22px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px 24px' }}>
+        {[['Stemmegrupper','SATB'],['Sangere','25'],['Dirigent','Laus Richter Larsen'],['Hjemby','Danmark']].map(([k,v]) => (
+          <div key={k}>
+            <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color: t.fgMuted, marginBottom:'3px' }}>{k}</div>
+            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'17px', fontWeight:400, color: t.fg }}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop:'24px', borderTop:`1px solid ${t.border}`, paddingTop:'20px' }}>
+        <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color: t.fgMuted, marginBottom:'10px' }}>Støttet af</div>
+        <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'14px', fontStyle:'italic', color: t.fgMuted, lineHeight:1.7 }}>
+          Brebølfonden · Frederiksbergfonden · William Demant Fonden · Jorck's Fond · Louis-Hansen Fonden · Schrøder Fond
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+/* ─── PAGE 6: STØT OS + KONTAKT ─────────────────────────── */
+const StøtKontaktPage = () => (
+  <div className="page page-break" style={{ background:'#0d0d0b', padding:'40px 48px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'56px' }}>
+    {/* Støt os */}
+    <div>
+      <Label>Støt os</Label>
+      <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'38px', fontWeight:300,
+        color: t.fg, margin:'10px 0 16px', letterSpacing:'-0.01em' }}>
+        Bliv partner
+      </h2>
+      <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', lineHeight:1.72,
+        color:'rgba(247,245,240,0.72)', marginBottom:'24px' }}>
+        Som partner forbinder du dig med høj musikalsk kvalitet og et dedikeret kulturpublikum.
+      </p>
+      {[
+        { tier:'Sæsonpartner', price:'kr. 25.000', perks:'Logo i alle programmer · nævnelse ved alle koncerter · VIP-billetter' },
+        { tier:'Projektpartner', price:'kr. 10.000', perks:'Logo i projektprogram · nævnelse ved koncert' },
+        { tier:'Støtter', price:'Fra kr. 2.000', perks:'Nævnelse i program og på hjemmeside' },
+      ].map(s => (
+        <div key={s.tier} className="no-break" style={{ display:'grid', gridTemplateColumns:'110px 1fr', gap:'0 16px',
+          padding:'14px 0', borderTop:`1px solid ${t.border}`, alignItems:'start' }}>
+          <div>
+            <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color: t.accent }}>{s.tier}</div>
+            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'18px', fontWeight:400, color: t.fg, marginTop:'3px' }}>{s.price}</div>
+          </div>
+          <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'14px', fontStyle:'italic', color: t.fgMuted, marginTop:'3px', lineHeight:1.6 }}>{s.perks}</div>
+        </div>
+      ))}
+      <div style={{ borderTop:`1px solid ${t.border}` }}></div>
+      <div style={{ marginTop:'24px', padding:'20px 24px', border:`1px solid ${t.border}` }}>
+        <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color: t.fgMuted, marginBottom:'6px' }}>A cappella-booking</div>
+        <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'26px', fontWeight:300, color: t.fg }}>kr. 10.000</div>
+        <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'14px', fontStyle:'italic', color: t.fgMuted }}>For en hel a cappella-koncert</div>
+      </div>
+    </div>
+
+    {/* Kontakt */}
+    <div>
+      <Label>Kontakt</Label>
+      <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'38px', fontWeight:300,
+        color: t.fg, margin:'10px 0 16px', letterSpacing:'-0.01em' }}>
+        Skriv til os
+      </h2>
+      <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', lineHeight:1.72,
+        color:'rgba(247,245,240,0.72)', marginBottom:'28px' }}>
+        Ønsker du at booke koret, blive partner, eller har du spørgsmål til vores koncerter?
+      </p>
+
+      {[['Email','info@richtersskala.dk'],['Hjemmeside','richtersskala.dk'],['Instagram','@richters_skala'],['Facebook','Kammerkoret Richters Skala']].map(([k,v]) => (
+        <div key={k} className="no-break" style={{ display:'flex', justifyContent:'space-between', padding:'13px 0', borderTop:`1px solid ${t.border}`, alignItems:'center' }}>
+          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'8px', fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color: t.fgMuted }}>{k}</div>
+          <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', fontStyle:'italic', color: t.fg }}>{v}</div>
+        </div>
+      ))}
+      <div style={{ borderTop:`1px solid ${t.border}` }}></div>
+
+      {/* Footer logo strip */}
+      <div style={{ marginTop:'32px', paddingTop:'24px', borderTop:`1px solid ${t.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <img src="assets/KRS-logo.jpg" alt="Kammerkoret Richters Skala"
+          style={{ height:'34px', width:'auto', filter:'invert(1) brightness(1.8)' }} />
+        <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', color: t.fgMuted, letterSpacing:'0.04em' }}>© 2025 Kammerkoret Richters Skala</div>
+      </div>
+    </div>
+  </div>
+);
+
+/* ─── APP ──────────────────────────────────────────────── */
+const App = () => (
+  <div>
+    <HeroPage />
+    <KoncertPage />
+    <GalleriPage />
+    <OptagelserPage />
+    <OmKoretPage />
+    <StøtKontaktPage />
+  </div>
+);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+/* ─── AUTO PRINT (after fonts + Babel) ────────────────── */
+window.addEventListener('load', () => {
+  document.fonts.ready.then(() => {
+    setTimeout(() => window.print(), 500);
+  });
+});
+</script>
+</body>
+</html>
