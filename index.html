@@ -35,11 +35,10 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 const EVENTS = (function() {
   try { const s = localStorage.getItem('krs_events'); if (s) return JSON.parse(s); } catch(e) {}
   return [
-    { id:1, date:'17. maj 2025',      day:'17', month:'maj 2025',      time:'19:30', title:'Stemmer i hvælvet',       venue:'Vor Frue Kirke, København',   type:'Forårskoncert',      soldOut:false, price:'kr. 180' },
-    { id:2, date:'14. juni 2025',     day:'14', month:'jun 2025',      time:'20:00', title:'Nordiske klange',         venue:'Ny Carlsberg Glyptotek',       type:'Sommerkoncert',      soldOut:false, price:'kr. 200' },
-    { id:3, date:'21. september 2025',day:'21', month:'sep 2025',      time:'19:00', title:'Mørk er november',        venue:'Roskilde Domkirke',            type:'Efterårskoncert',    soldOut:false, price:'kr. 160' },
-    { id:4, date:'2. november 2025',  day:'2',  month:'nov 2025',      time:'17:00', title:'Allehelgensaften',        venue:'Sankt Petri Kirke',            type:'Allehelgensconcert', soldOut:true,  price:'kr. 180' },
-    { id:5, date:'20. december 2025', day:'20', month:'dec 2025',      time:'19:30', title:'Fra Mørket til Lyset',    venue:'Frederiksborg Slotskirke',     type:'Julekoncert',        soldOut:false, price:'kr. 220' },
+    { id:1, date:'16. juni 2025',      day:'16',    month:'jun 2025', time:'', title:'Sommerkoncert',     venue:'',                   type:'Sommerkoncert',   soldOut:false, price:'' },
+    { id:2, date:'13. september 2025', day:'13',    month:'sep 2025', time:'', title:'Brønshøj Vandtårn', venue:'Brønshøj Vandtårn',  type:'Efterårskoncert', soldOut:false, price:'' },
+    { id:3, date:'17. september 2025', day:'17–20', month:'sep 2025', time:'', title:'Bornholm Turné',    venue:'Bornholm',            type:'Turné',           soldOut:false, price:'' },
+    { id:4, date:'13. december 2025',  day:'13',    month:'dec 2025', time:'', title:'Julekoncert',       venue:'Rundetårn',           type:'Julekoncert',     soldOut:false, price:'' },
   ];
 })();
 
