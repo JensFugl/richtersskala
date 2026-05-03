@@ -31,23 +31,29 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 /* ─── DATA ─────────────────────────────────────────────── */
-const EVENTS = [
-  { id:1, date:'17. maj 2025',      day:'17', month:'maj 2025',      time:'19:30', title:'Stemmer i hvælvet',        venue:'Vor Frue Kirke, København',    type:'Forårskoncert',   soldOut:false, price:'kr. 180' },
-  { id:2, date:'14. juni 2025',     day:'14', month:'jun 2025',      time:'20:00', title:'Nordiske klange',          venue:'Ny Carlsberg Glyptotek',        type:'Sommerkoncert',   soldOut:false, price:'kr. 200' },
-  { id:3, date:'21. september 2025',day:'21', month:'sep 2025',      time:'19:00', title:'Mørk er november',         venue:'Roskilde Domkirke',             type:'Efterårskoncert', soldOut:false, price:'kr. 160' },
-  { id:4, date:'2. november 2025',  day:'2',  month:'nov 2025',      time:'17:00', title:'Allehelgensaften',         venue:'Sankt Petri Kirke',             type:'Allehelgensconcert', soldOut:true, price:'kr. 180' },
-  { id:5, date:'20. december 2025', day:'20', month:'dec 2025',      time:'19:30', title:'Fra Mørket til Lyset',     venue:'Frederiksborg Slotskirke',      type:'Julekoncert',     soldOut:false, price:'kr. 220' },
-];
+// Admin changes are persisted in localStorage (keys: krs_events, krs_photos, krs_videos).
+const EVENTS = (function() {
+  try { const s = localStorage.getItem('krs_events'); if (s) return JSON.parse(s); } catch(e) {}
+  return [
+    { id:1, date:'16. juni 2025',      day:'16',    month:'jun 2025', time:'', title:'Sommerkoncert',     venue:'',                   type:'Sommerkoncert',   soldOut:false, price:'' },
+    { id:2, date:'13. september 2025', day:'13',    month:'sep 2025', time:'', title:'Brønshøj Vandtårn', venue:'Brønshøj Vandtårn',  type:'Efterårskoncert', soldOut:false, price:'' },
+    { id:3, date:'17. september 2025', day:'17–20', month:'sep 2025', time:'', title:'Bornholm Turné',    venue:'Bornholm',            type:'Turné',           soldOut:false, price:'' },
+    { id:4, date:'13. december 2025',  day:'13',    month:'dec 2025', time:'', title:'Julekoncert',       venue:'Rundetårn',           type:'Julekoncert',     soldOut:false, price:'' },
+  ];
+})();
 
-const PHOTOS = [
-  { src:'assets/photo-choir-museum.jpg',   caption:'Ny Carlsberg Glyptotek, 2024' },
-  { src:'assets/photo-singers-dark.jpg',   caption:'Vor Frue Kirke, 2024' },
-  { src:'assets/photo-conductor.jpg',      caption:'Dirigent Laus Richter Larsen' },
-  { src:'assets/photo-choir-church.jpg',   caption:'Roskilde Domkirke, 2023' },
-  { src:'assets/photo-choir-full.jpg',     caption:'Koncertsalen, 2024' },
-  { src:'assets/photo-choir-singing.jpg',  caption:'Frederiksborg Slotskirke, 2023' },
-  { src:'assets/photo-candles.jpg',        caption:'Julekoncert, 2024' },
-];
+const PHOTOS = (function() {
+  try { const s = localStorage.getItem('krs_photos'); if (s) return JSON.parse(s); } catch(e) {}
+  return [
+    { src:'assets/photo-choir-museum.jpg',  caption:'Ny Carlsberg Glyptotek, 2024' },
+    { src:'assets/photo-singers-dark.jpg',  caption:'Vor Frue Kirke, 2024' },
+    { src:'assets/photo-conductor.jpg',     caption:'Dirigent Laus Richter Larsen' },
+    { src:'assets/photo-choir-church.jpg',  caption:'Roskilde Domkirke, 2023' },
+    { src:'assets/photo-choir-full.jpg',    caption:'Koncertsalen, 2024' },
+    { src:'assets/photo-choir-singing.jpg', caption:'Frederiksborg Slotskirke, 2023' },
+    { src:'assets/photo-candles.jpg',       caption:'Julekoncert, 2024' },
+  ];
+})();
 
 const RECORDINGS = [
   { title:'Lux Aurumque',      composer:'Eric Whitacre',          duration:'4:12', year:'2024', concert:'Mørk er november' },
@@ -58,12 +64,15 @@ const RECORDINGS = [
   { title:'O Magnum Mysterium',composer:'Morten Lauridsen',       duration:'5:14', year:'2024', concert:'Fra Mørket til Lyset' },
 ];
 
-const VIDEOS = [
-  { id:'v1', title:'Lux Aurumque — Live, Vor Frue Kirke',      year:'2024', duration:'4:12', thumb:'assets/photo-singers-dark.jpg' },
-  { id:'v2', title:'Nordiske klange — Højdepunkter',            year:'2024', duration:'18:40', thumb:'assets/photo-choir-museum.jpg' },
-  { id:'v3', title:'Fra Mørket til Lyset — Julekoncert',       year:'2024', duration:'54:10', thumb:'assets/photo-candles.jpg' },
-  { id:'v4', title:'Allehelgensaften 2023 — Fulde koncert',    year:'2023', duration:'62:00', thumb:'assets/photo-choir-church.jpg' },
-];
+const VIDEOS = (function() {
+  try { const s = localStorage.getItem('krs_videos'); if (s) return JSON.parse(s); } catch(e) {}
+  return [
+    { id:'v1', title:'Lux Aurumque — Live, Vor Frue Kirke',      year:'2024', duration:'4:12',  thumb:'assets/photo-singers-dark.jpg',  youtubeUrl:'' },
+    { id:'v2', title:'Nordiske klange — Højdepunkter',            year:'2024', duration:'18:40', thumb:'assets/photo-choir-museum.jpg',  youtubeUrl:'' },
+    { id:'v3', title:'Fra Mørket til Lyset — Julekoncert',       year:'2024', duration:'54:10', thumb:'assets/photo-candles.jpg',       youtubeUrl:'' },
+    { id:'v4', title:'Allehelgensaften 2023 — Fulde koncert',    year:'2023', duration:'62:00', thumb:'assets/photo-choir-church.jpg',  youtubeUrl:'' },
+  ];
+})();
 
 const SPONSORS = [
   { name:'Brebølfonden', tier:'Sæsonpartner' },
@@ -163,18 +172,20 @@ const Header = ({ t, theme, scrolled }) => {
 };
 
 /* ─── HERO ─────────────────────────────────────────────── */
-const Hero = ({ t, heroPhoto }) => (
+const Hero = ({ t, heroPhoto }) => {
+  const next = EVENTS[0] || null;
+  return (
   <section id="top" data-screen-label="Hero" style={{ position:'relative', width:'100%', height:'100vh', overflow:'hidden', display:'flex', alignItems:'flex-end' }}>
     <img src={HERO_PHOTOS[heroPhoto] || HERO_PHOTOS.museum} alt=""
       style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(0.48)' }} />
     <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(13,13,11,0.9) 0%, rgba(13,13,11,0.2) 50%, transparent 100%)' }}></div>
     <div style={{ position:'relative', zIndex:2, padding:'0 clamp(20px,4vw,64px) clamp(48px,7vh,96px)', maxWidth:'900px' }}>
-      <Label t={{ fgMuted: '#c8933a' }}>Næste koncert</Label>
+      <Label t={{ fgMuted: '#c8933a' }}>{next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}</Label>
       <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(3rem,6vw,5.8rem)', fontWeight:300, lineHeight:1.02, letterSpacing:'-0.01em', color:'#f7f5f0', margin:'16px 0 18px' }}>
-        Stemmer i hvælvet
+        {next ? next.title : 'Kommende koncerter'}
       </h1>
       <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'clamp(17px,1.6vw,21px)', fontStyle:'italic', lineHeight:1.65, color:'rgba(247,245,240,0.68)', marginBottom:'40px', maxWidth:'520px' }}>
-        Forårskoncert — 17. maj 2025, kl. 19:30<br />Vor Frue Kirke, København
+        {next ? <>{next.type} — {next.date}, kl. {next.time}<br />{next.venue}</> : null}
       </p>
       <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
         <a href="#koncerter" style={{
@@ -196,7 +207,8 @@ const Hero = ({ t, heroPhoto }) => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 /* ─── KONCERTKALENDER ──────────────────────────────────── */
 const Koncertkalender = ({ t }) => {
@@ -453,7 +465,7 @@ const Video = ({ t }) => {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'2px' }}>
           {VIDEOS.map((v, i) => (
             <div key={v.id}
-              onClick={() => setPlaying(playing === v.id ? null : v.id)}
+              onClick={() => v.youtubeUrl ? window.open(v.youtubeUrl, '_blank', 'noopener') : setPlaying(playing === v.id ? null : v.id)}
               style={{ position:'relative', cursor:'pointer', overflow:'hidden', aspectRatio:'16/9' }}
             >
               <img src={v.thumb} alt="" style={{ width:'100%', height:'100%', objectFit:'cover',
