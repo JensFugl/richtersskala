@@ -32,6 +32,14 @@
     .img-cell { min-height: 260px; }
     .concert-detail { grid-template-columns: 1fr !important; }
   }
+
+  /* scroll fade-in */
+  .fade-in { opacity: 0; transform: translateY(22px); transition: opacity 620ms ease-out, transform 620ms ease-out; will-change: opacity, transform; }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* back-to-top */
+  .back-top { opacity: 0; pointer-events: none; transition: opacity 300ms ease-out; }
+  .back-top.show { opacity: 1; pointer-events: auto; }
 </style>
 </head>
 <body>
@@ -82,6 +90,36 @@ const SPONSORS = [
   { name:'Dansk Kapelmesterforening', tier:'Støtter' },
 ];
 
+/* ─── HOOKS ────────────────────────────────────────────── */
+function useFadeIn() {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { el.classList.add('visible'); obs.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+function useActiveSection() {
+  const [active, setActive] = React.useState('');
+  React.useEffect(() => {
+    const ids = ['koncerter','galleri','optagelser','video','om-koret','støt-os','kontakt'];
+    const obs = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) setActive(e.target.id); }),
+      { rootMargin: '-40% 0px -55% 0px' }
+    );
+    ids.forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, []);
+  return active;
+}
+
 /* ─── THEMES ────────────────────────────────────────────── */
 const THEME_DARK = {
   bg:'#0d0d0b', fg:'#f7f5f0', fgMuted:'#8a8278', fgAlt:'rgba(247,245,240,0.75)',
@@ -128,7 +166,7 @@ const MoonIcon = () => (
   </svg>
 );
 
-const Header = ({ t, scrolled, dark, onToggleTheme }) => {
+const Header = ({ t, scrolled, dark, onToggleTheme, activeSection }) => {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const navLinks = [
     { href:'#koncerter', label:'Koncerter' },
@@ -140,10 +178,13 @@ const Header = ({ t, scrolled, dark, onToggleTheme }) => {
     { href:'#kontakt',   label:'Kontakt' },
   ];
   const bgVisible = scrolled || !t.dark;
-  const navLinkStyle = {
+  const linkStyle = (href) => ({
     fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', fontWeight:500,
-    letterSpacing:'0.12em', textTransform:'uppercase', color: t.fg, opacity:0.7,
-  };
+    letterSpacing:'0.12em', textTransform:'uppercase', color: t.fg,
+    opacity: activeSection && href === '#' + activeSection ? 1 : 0.6,
+    borderBottom: activeSection && href === '#' + activeSection ? `1px solid ${t.accent}` : '1px solid transparent',
+    paddingBottom:'2px', transition:'opacity 200ms',
+  });
   return (
     <header style={{ position:'fixed', top:0, left:0, right:0, zIndex:200 }}>
       <div style={{
@@ -164,7 +205,7 @@ const Header = ({ t, scrolled, dark, onToggleTheme }) => {
           <nav className="desk-nav">
             <ul style={{ display:'flex', gap:'clamp(16px,2.5vw,32px)', listStyle:'none' }}>
               {navLinks.map(l => (
-                <li key={l.href}><a href={l.href} style={navLinkStyle}>{l.label}</a></li>
+                <li key={l.href}><a href={l.href} style={linkStyle(l.href)}>{l.label}</a></li>
               ))}
             </ul>
           </nav>
@@ -202,7 +243,7 @@ const Header = ({ t, scrolled, dark, onToggleTheme }) => {
             {navLinks.map(l => (
               <li key={l.href}>
                 <a href={l.href} onClick={() => setMenuOpen(false)} style={{
-                  ...navLinkStyle, fontSize:'13px', letterSpacing:'0.14em',
+                  ...linkStyle(l.href), fontSize:'13px', letterSpacing:'0.14em',
                 }}>{l.label}</a>
               </li>
             ))}
@@ -254,10 +295,11 @@ const Hero = ({ t }) => {
 /* ─── KONCERTKALENDER ──────────────────────────────────── */
 const Koncertkalender = ({ t }) => {
   const [expanded, setExpanded] = React.useState(null);
+  const ref = useFadeIn();
 
   return (
     <section id="koncerter" style={{ background: t.sectionBg, padding:'80px clamp(20px,4vw,48px)' }}>
-      <div style={{ maxWidth:'1080px', margin:'0 auto' }}>
+      <div ref={ref} className="fade-in" style={{ maxWidth:'1080px', margin:'0 auto' }}>
         <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'40px', paddingBottom:'20px', borderBottom:`1px solid ${t.border}` }}>
           <div>
             <Label t={t}>Sæson 2025</Label>
@@ -346,10 +388,11 @@ const Koncertkalender = ({ t }) => {
 /* ─── BILLEDGALLERI ────────────────────────────────────── */
 const Galleri = ({ t }) => {
   const [lightbox, setLightbox] = React.useState(null);
+  const ref = useFadeIn();
 
   return (
     <section id="galleri" style={{ background:t.altSectionBg, padding:'80px 0 0' }}>
-      <div style={{ maxWidth:'1080px', margin:'0 auto', padding:'0 clamp(20px,4vw,48px)', marginBottom:'40px' }}>
+      <div ref={ref} className="fade-in" style={{ maxWidth:'1080px', margin:'0 auto', padding:'0 clamp(20px,4vw,48px)', marginBottom:'40px' }}>
         <Label t={t}>Fotografi</Label>
         <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(2rem,3.5vw,3rem)', fontWeight:300, color:t.fg, marginTop:'10px', letterSpacing:'-0.01em' }}>
           Billedgalleri
@@ -402,6 +445,7 @@ const Galleri = ({ t }) => {
 /* ─── OPTAGELSER ───────────────────────────────────────── */
 const Optagelser = ({ t }) => {
   const [playing, setPlaying] = React.useState(null);
+  const ref = useFadeIn();
 
   const WaveformSVG = ({ active }) => (
     <svg width="48" height="20" viewBox="0 0 48 20" fill="none">
@@ -417,7 +461,7 @@ const Optagelser = ({ t }) => {
 
   return (
     <section id="optagelser" style={{ background:t.sectionBg, padding:'80px clamp(20px,4vw,48px)' }}>
-      <div style={{ maxWidth:'780px', margin:'0 auto' }}>
+      <div ref={ref} className="fade-in" style={{ maxWidth:'780px', margin:'0 auto' }}>
         <Label t={t}>Lyd</Label>
         <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(2rem,3.5vw,3rem)', fontWeight:300, color:t.fg, marginTop:'10px', marginBottom:'40px', letterSpacing:'-0.01em' }}>
           Optagelser
@@ -473,10 +517,11 @@ const Optagelser = ({ t }) => {
 /* ─── VIDEO ────────────────────────────────────────────── */
 const Video = ({ t }) => {
   const [playing, setPlaying] = React.useState(null);
+  const ref = useFadeIn();
 
   return (
     <section id="video" style={{ background:t.altSectionBg, padding:'80px clamp(20px,4vw,48px)' }}>
-      <div style={{ maxWidth:'1080px', margin:'0 auto' }}>
+      <div ref={ref} className="fade-in" style={{ maxWidth:'1080px', margin:'0 auto' }}>
         <Label t={t}>Video</Label>
         <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(2rem,3.5vw,3rem)', fontWeight:300, color:t.fg, marginTop:'10px', marginBottom:'40px', letterSpacing:'-0.01em' }}>
           Koncertoptagelser
@@ -522,10 +567,13 @@ const Video = ({ t }) => {
 };
 
 /* ─── OM KORET ─────────────────────────────────────────── */
-const OmKoret = ({ t }) => (
+const OmKoret = ({ t }) => {
+  const ref1 = useFadeIn();
+  const ref2 = useFadeIn();
+  return (
   <section id="om-koret" style={{ background:t.sectionBg }}>
     {/* Choir */}
-    <div className="r2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'540px' }}>
+    <div ref={ref1} className="fade-in r2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'540px' }}>
       <div className="img-cell" style={{ overflow:'hidden', position:'relative' }}>
         <img src="assets/photo-choir-full.jpg" alt="Kammerkoret Richters Skala"
           style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', filter:'brightness(0.68)' }} />
@@ -551,7 +599,7 @@ const OmKoret = ({ t }) => (
     </div>
 
     {/* Conductor */}
-    <div className="r2" style={{ background:t.conductorBg, display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'420px' }}>
+    <div ref={ref2} className="fade-in r2" style={{ background:t.conductorBg, display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'420px' }}>
       <div style={{ padding:'clamp(40px,6vw,88px) clamp(28px,5vw,72px)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
         <Label t={t}>Dirigenten</Label>
         <h3 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(1.6rem,2.5vw,2.4rem)', fontWeight:300, color:t.fg, margin:'14px 0 20px', lineHeight:1.1 }}>
@@ -575,12 +623,15 @@ const OmKoret = ({ t }) => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 /* ─── STØT OS ──────────────────────────────────────────── */
-const StøtOs = ({ t }) => (
+const StøtOs = ({ t }) => {
+  const ref = useFadeIn();
+  return (
   <section id="støt-os" style={{ background:t.altSectionBg, padding:'80px clamp(20px,4vw,48px)' }}>
-    <div style={{ maxWidth:'1080px', margin:'0 auto' }}>
+    <div ref={ref} className="fade-in" style={{ maxWidth:'1080px', margin:'0 auto' }}>
       <div className="r2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'64px', alignItems:'start' }}>
         <div>
           <Label t={t}>Støt os</Label>
@@ -639,12 +690,14 @@ const StøtOs = ({ t }) => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 /* ─── KONTAKT ──────────────────────────────────────────── */
 const Kontakt = ({ t }) => {
   const [form, setForm] = React.useState({ navn:'', email:'', besked:'' });
   const [sent, setSent] = React.useState(false);
+  const ref = useFadeIn();
 
   const inputStyle = {
     width:'100%', background:'transparent',
@@ -656,7 +709,7 @@ const Kontakt = ({ t }) => {
 
   return (
     <section id="kontakt" style={{ background:t.sectionBg, padding:'80px clamp(20px,4vw,48px)' }}>
-      <div className="r2" style={{ maxWidth:'900px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'clamp(32px,6vw,80px)' }}>
+      <div ref={ref} className="fade-in r2" style={{ maxWidth:'900px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'clamp(32px,6vw,80px)' }}>
         <div>
           <Label t={t}>Kontakt</Label>
           <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(2rem,3.5vw,3rem)', fontWeight:300, color:t.fg, margin:'14px 0 20px', letterSpacing:'-0.01em' }}>
@@ -754,9 +807,12 @@ const Footer = () => (
 
 /* ─── APP ──────────────────────────────────────────────── */
 const App = () => {
-  const [dark, setDark] = React.useState(true);
+  const [dark, setDark] = React.useState(() => {
+    try { return localStorage.getItem('krs_theme') !== 'lys'; } catch { return true; }
+  });
   const t = dark ? THEME_DARK : THEME_LIGHT;
   const [scrolled, setScrolled] = React.useState(false);
+  const activeSection = useActiveSection();
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
@@ -764,9 +820,15 @@ const App = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const toggleTheme = () => setDark(d => {
+    const next = !d;
+    try { localStorage.setItem('krs_theme', next ? 'mørk' : 'lys'); } catch {}
+    return next;
+  });
+
   return (
     <div style={{ background:t.bg }}>
-      <Header t={t} scrolled={scrolled} dark={dark} onToggleTheme={() => setDark(d => !d)} />
+      <Header t={t} scrolled={scrolled} dark={dark} onToggleTheme={toggleTheme} activeSection={activeSection} />
       <Hero t={t} />
       <Koncertkalender t={t} />
       <Galleri t={t} />
@@ -776,6 +838,23 @@ const App = () => {
       <StøtOs t={t} />
       <Kontakt t={t} />
       <Footer />
+
+      {/* Back to top */}
+      <button
+        className={`back-top${scrolled ? ' show' : ''}`}
+        onClick={() => window.scrollTo({ top:0, behavior:'smooth' })}
+        aria-label="Tilbage til toppen"
+        style={{
+          position:'fixed', bottom:'24px', right:'24px', zIndex:300,
+          width:'40px', height:'40px', border:`1px solid ${t.border}`,
+          background:t.cardBg, color:t.fg,
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M2 8.5 L6.5 4 L11 8.5"/>
+        </svg>
+      </button>
     </div>
   );
 };
