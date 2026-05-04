@@ -41,7 +41,6 @@ const PHOTOS = [
   { src:'assets/photo-candles.jpg',       caption:'Julekoncert, 2024' },
 ];
 
-const R2_BASE = 'https://pub-0ff67d80d8d44fe48ade0bd5cc4e08e1.r2.dev';
 
 const VIDEOS = [
   { id:'v1', title:'Lux Aurumque — Live, Vor Frue Kirke',   year:'2024', duration:'4:12',  thumb:'assets/photo-singers-dark.jpg',  youtubeUrl:'' },
@@ -319,12 +318,12 @@ const Optagelser = () => {
   const audioRef = React.useRef(null);
 
   React.useEffect(() => {
-    fetch(`${R2_BASE}/recordings.json`)
+    fetch('recordings.json')
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(data => {
-        const keys = Array.isArray(data) ? data : [];
-        setRecordings(keys);
-        setStatus(keys.length ? 'ready' : 'empty');
+        const entries = Array.isArray(data) ? data : [];
+        setRecordings(entries);
+        setStatus(entries.length ? 'ready' : 'empty');
       })
       .catch(() => setStatus('error'));
   }, []);
@@ -351,7 +350,7 @@ const Optagelser = () => {
       audio.pause();
       setPlayingIdx(null);
     } else {
-      audio.src = `${R2_BASE}/${encodeURIComponent(recordings[i])}`;
+      audio.src = recordings[i].url;
       audio.play();
       setPlayingIdx(i);
       setProgress(0);
@@ -363,9 +362,6 @@ const Optagelser = () => {
     const m = Math.floor(s / 60), sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2,'0')}`;
   };
-
-  const toTitle = (key) => key.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase());
 
   const WaveformSVG = ({ active }) => (
     <svg width="48" height="20" viewBox="0 0 48 20" fill="none">
@@ -404,7 +400,7 @@ const Optagelser = () => {
           </div>
         )}
 
-        {status === 'ready' && recordings.map((key, i) => {
+        {status === 'ready' && recordings.map((rec, i) => {
           const isPlaying = playingIdx === i;
           return (
             <div key={i} style={{ display:'grid', gridTemplateColumns:'40px 1fr auto', gap:'0 20px', alignItems:'center',
@@ -427,7 +423,7 @@ const Optagelser = () => {
                 )}
               </button>
               <div>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'20px', fontWeight:400, color: t.fg, lineHeight:1.2 }}>{toTitle(key)}</div>
+                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'20px', fontWeight:400, color: t.fg, lineHeight:1.2 }}>{rec.title}</div>
                 {isPlaying && (
                   <div style={{ marginTop:'10px', height:'3px', background: t.border, position:'relative' }}>
                     <div style={{ position:'absolute', left:0, top:0, height:'100%', width:`${progress * 100}%`, background: t.accent, transition:'width 200ms' }}></div>
