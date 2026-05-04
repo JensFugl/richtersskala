@@ -76,10 +76,8 @@ function downloadICS(ev) {
 
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = `${ev.title.replace(/\s+/g,'-').toLowerCase()}.ics`;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
+  window.open(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 const PHOTOS = [
