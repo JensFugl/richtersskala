@@ -76,6 +76,19 @@ const lightTheme = {
 };
 const ThemeCtx = React.createContext(darkTheme);
 
+/* ─── LAYOUT ───────────────────────────────────────────── */
+const LayoutCtx = React.createContext(false);
+const useIsMobile = () => {
+  const [mobile, setMobile] = React.useState(() => window.innerWidth < 768);
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = e => setMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return mobile;
+};
+
 /* ─── SHARED LABEL ─────────────────────────────────────── */
 const Label = ({ children }) => {
   const t = React.useContext(ThemeCtx);
@@ -90,6 +103,9 @@ const Label = ({ children }) => {
 /* ─── HEADER ───────────────────────────────────────────── */
 const Header = ({ scrolled, toggleTheme }) => {
   const t = React.useContext(ThemeCtx);
+  const isMobile = React.useContext(LayoutCtx);
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
   const navLinks = [
     { href:'#koncerter', label:'Koncerter' },
     { href:'#galleri',   label:'Galleri' },
@@ -100,54 +116,106 @@ const Header = ({ scrolled, toggleTheme }) => {
     { href:'#kontakt',   label:'Kontakt' },
   ];
 
-  return (
-    <header style={{
-      position:'fixed', top:0, left:0, right:0, zIndex:200,
-      display:'flex', alignItems:'center', justifyContent:'space-between',
-      padding:'14px clamp(20px,4vw,48px)',
-      background: scrolled ? t.headerBg : 'transparent',
-      backdropFilter: scrolled ? 'blur(12px)' : 'none',
-      borderBottom: scrolled ? `1px solid ${t.headerBorder}` : '1px solid transparent',
-      transition: 'background 350ms ease-out, border-color 350ms ease-out',
+  const ThemeToggle = () => (
+    <button onClick={toggleTheme} title="Skift farvetema" style={{
+      background:'none', border:'none', cursor:'pointer', padding:'4px',
+      color: t.fg, opacity:0.7, display:'flex', alignItems:'center',
     }}>
-      <a href="#top">
-        <img src="assets/KRS-logo.jpg" alt="Kammerkoret Richters Skala"
-          style={{ height:'40px', width:'auto', filter: t.dark ? 'invert(1) brightness(1.8)' : 'none' }} />
-      </a>
-      <div style={{ display:'flex', alignItems:'center', gap:'clamp(16px,2.5vw,32px)' }}>
-        <nav>
-          <ul style={{ display:'flex', gap:'clamp(16px,2.5vw,32px)', listStyle:'none' }}>
-            {navLinks.map(l => (
-              <li key={l.href}>
-                <a href={l.href} style={{
-                  fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', fontWeight:500,
-                  letterSpacing:'0.12em', textTransform:'uppercase',
-                  color: t.fg, opacity:0.7,
-                }}>{l.label}</a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <button onClick={toggleTheme} title="Skift farvetema" style={{
-          background:'none', border:'none', cursor:'pointer', padding:'4px',
-          color: t.fg, opacity:0.7, display:'flex', alignItems:'center',
+      {t.dark ? (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <circle cx="8" cy="8" r="3"/>
+          <line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/>
+          <line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/>
+          <line x1="3.05" y1="3.05" x2="4.46" y2="4.46"/><line x1="11.54" y1="11.54" x2="12.95" y2="12.95"/>
+          <line x1="3.05" y1="12.95" x2="4.46" y2="11.54"/><line x1="11.54" y1="4.46" x2="12.95" y2="3.05"/>
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M13.5 10A6 6 0 0 1 6 2.5a5.5 5.5 0 1 0 7.5 7.5z"/>
+        </svg>
+      )}
+    </button>
+  );
+
+  return (
+    <>
+      <header style={{
+        position:'fixed', top:0, left:0, right:0, zIndex:200,
+        display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'14px clamp(20px,4vw,48px)',
+        background: (scrolled || menuOpen) ? t.headerBg : 'transparent',
+        backdropFilter: (scrolled || menuOpen) ? 'blur(12px)' : 'none',
+        borderBottom: (scrolled || menuOpen) ? `1px solid ${t.headerBorder}` : '1px solid transparent',
+        transition: 'background 350ms ease-out, border-color 350ms ease-out',
+      }}>
+        <a href="#top" onClick={() => setMenuOpen(false)}>
+          <img src="assets/KRS-logo.jpg" alt="Kammerkoret Richters Skala"
+            style={{ height:'40px', width:'auto', filter: t.dark ? 'invert(1) brightness(1.8)' : 'none' }} />
+        </a>
+
+        {isMobile ? (
+          <button onClick={() => setMenuOpen(o => !o)} style={{
+            background:'none', border:'none', cursor:'pointer', padding:'8px',
+            color: t.fg, display:'flex', flexDirection:'column', gap:'5px',
+          }}>
+            {menuOpen ? (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <line x1="3" y1="3" x2="17" y2="17"/><line x1="17" y1="3" x2="3" y2="17"/>
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/>
+              </svg>
+            )}
+          </button>
+        ) : (
+          <div style={{ display:'flex', alignItems:'center', gap:'clamp(16px,2.5vw,32px)' }}>
+            <nav>
+              <ul style={{ display:'flex', gap:'clamp(16px,2.5vw,32px)', listStyle:'none' }}>
+                {navLinks.map(l => (
+                  <li key={l.href}>
+                    <a href={l.href} style={{
+                      fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', fontWeight:500,
+                      letterSpacing:'0.12em', textTransform:'uppercase',
+                      color: t.fg, opacity:0.7,
+                    }}>{l.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <ThemeToggle />
+          </div>
+        )}
+      </header>
+
+      {isMobile && menuOpen && (
+        <div style={{
+          position:'fixed', inset:0, zIndex:190,
+          background: t.headerBg, backdropFilter:'blur(12px)',
+          display:'flex', flexDirection:'column', justifyContent:'center',
+          padding:'80px 40px 48px',
         }}>
-          {t.dark ? (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <circle cx="8" cy="8" r="3"/>
-              <line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/>
-              <line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/>
-              <line x1="3.05" y1="3.05" x2="4.46" y2="4.46"/><line x1="11.54" y1="11.54" x2="12.95" y2="12.95"/>
-              <line x1="3.05" y1="12.95" x2="4.46" y2="11.54"/><line x1="11.54" y1="4.46" x2="12.95" y2="3.05"/>
-            </svg>
-          ) : (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M13.5 10A6 6 0 0 1 6 2.5a5.5 5.5 0 1 0 7.5 7.5z"/>
-            </svg>
-          )}
-        </button>
-      </div>
-    </header>
+          <nav>
+            <ul style={{ listStyle:'none', display:'flex', flexDirection:'column', gap:'0' }}>
+              {navLinks.map(l => (
+                <li key={l.href} style={{ borderBottom:`1px solid ${t.border}` }}>
+                  <a href={l.href}
+                    onClick={() => setMenuOpen(false)}
+                    style={{
+                      display:'block', padding:'20px 0',
+                      fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'28px', fontWeight:300,
+                      letterSpacing:'-0.01em', color: t.fg,
+                    }}>{l.label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div style={{ marginTop:'40px' }}>
+            <ThemeToggle />
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
@@ -192,6 +260,7 @@ const Hero = () => {
 /* ─── KONCERTKALENDER ──────────────────────────────────── */
 const Koncertkalender = () => {
   const t = React.useContext(ThemeCtx);
+  const isMobile = React.useContext(LayoutCtx);
   const [expanded, setExpanded] = React.useState(null);
 
   return (
@@ -240,7 +309,7 @@ const Koncertkalender = () => {
             </div>
 
             {expanded === e.id && (
-              <div style={{ background: t.cardBg, border:`1px solid ${t.border}`, padding:'28px 32px', marginBottom:'2px', display:'grid', gridTemplateColumns:'1fr auto', gap:'32px', alignItems:'start' }}>
+              <div style={{ background: t.cardBg, border:`1px solid ${t.border}`, padding: isMobile ? '20px' : '28px 32px', marginBottom:'2px', display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto', gap: isMobile ? '20px' : '32px', alignItems:'start' }}>
                 <div>
                   <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'17px', lineHeight:1.75, color: t.fgBody, marginBottom:'16px' }}>
                     En aften med kammerkorets fortolkning af tidløs kormusik i en af Københavns smukkeste kirker. Programmet rummer værker fra renæssancen til det 21. århundrede.
@@ -286,6 +355,7 @@ const Koncertkalender = () => {
 /* ─── BILLEDGALLERI ────────────────────────────────────── */
 const Galleri = () => {
   const t = React.useContext(ThemeCtx);
+  const isMobile = React.useContext(LayoutCtx);
   const [lightbox, setLightbox] = React.useState(null);
 
   return (
@@ -297,13 +367,13 @@ const Galleri = () => {
         </h2>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'2px' }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap:'2px' }}>
         {PHOTOS.map((p, i) => (
           <div key={i}
             onClick={() => setLightbox(i)}
             style={{ position:'relative', overflow:'hidden', cursor:'pointer',
-              aspectRatio: i === 0 || i === 4 ? '16/9' : '4/3',
-              gridColumn: (i === 0 || i === 4) ? 'span 2' : 'span 1',
+              aspectRatio: !isMobile && (i === 0 || i === 4) ? '16/9' : '4/3',
+              gridColumn: !isMobile && (i === 0 || i === 4) ? 'span 2' : 'span 1',
             }}
           >
             <img src={p.src} alt={p.caption}
@@ -539,13 +609,14 @@ const Video = () => {
 /* ─── OM KORET ─────────────────────────────────────────── */
 const OmKoret = () => {
   const t = React.useContext(ThemeCtx);
+  const isMobile = React.useContext(LayoutCtx);
   return (
   <section id="om-koret" style={{ background: t.sectionBg }}>
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'540px' }}>
-      <div style={{ overflow:'hidden', position:'relative' }}>
+    <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', minHeight: isMobile ? 'unset' : '540px' }}>
+      <div style={{ overflow:'hidden', position:'relative', height: isMobile ? '260px' : 'unset' }}>
         <img src="assets/photo-choir-full.jpg" alt="Kammerkoret Richters Skala"
           style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', filter:'brightness(0.68)' }} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, transparent, rgba(13,13,11,0.5))' }}></div>
+        {!isMobile && <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, transparent, rgba(13,13,11,0.5))' }}></div>}
       </div>
       <div style={{ padding:'clamp(40px,6vw,88px) clamp(28px,5vw,72px)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
         <Label>Om koret</Label>
@@ -566,7 +637,7 @@ const OmKoret = () => {
       </div>
     </div>
 
-    <div style={{ background: t.cardBg, display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'420px' }}>
+    <div style={{ background: t.cardBg, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', minHeight: isMobile ? 'unset' : '420px' }}>
       <div style={{ padding:'clamp(40px,6vw,88px) clamp(28px,5vw,72px)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
         <Label>Dirigenten</Label>
         <h3 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(1.6rem,2.5vw,2.4rem)', fontWeight:300, color: t.fg, margin:'14px 0 20px', lineHeight:1.1 }}>
@@ -586,7 +657,7 @@ const OmKoret = () => {
           </div>
         </div>
       </div>
-      <div style={{ overflow:'hidden' }}>
+      <div style={{ overflow:'hidden', height: isMobile ? '260px' : 'unset' }}>
         <img src="assets/photo-conductor.jpg" alt="Laus Richter Larsen"
           style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 15%', filter:'brightness(0.75)' }} />
       </div>
@@ -598,10 +669,11 @@ const OmKoret = () => {
 /* ─── STØT OS ──────────────────────────────────────────── */
 const StøtOs = () => {
   const t = React.useContext(ThemeCtx);
+  const isMobile = React.useContext(LayoutCtx);
   return (
   <section id="støt-os" style={{ background: t.altSectionBg, padding:'80px clamp(20px,4vw,48px)' }}>
     <div style={{ maxWidth:'1080px', margin:'0 auto' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'64px', alignItems:'start' }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '40px' : '64px', alignItems:'start' }}>
         <div>
           <Label>Støt os</Label>
           <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(2rem,3.5vw,3rem)', fontWeight:300, color: t.fg, margin:'14px 0 20px', letterSpacing:'-0.01em' }}>
@@ -619,7 +691,7 @@ const StøtOs = () => {
             { tier:'Projektpartner',price:'kr. 10.000', perks:'Logo i projektprogram, nævnelse ved koncert' },
             { tier:'Støtter',       price:'Fra kr. 2.000', perks:'Nævnelse i program og på hjemmeside' },
           ].map(s => (
-            <div key={s.tier} style={{ display:'grid', gridTemplateColumns:'120px 1fr', gap:'0 20px', padding:'16px 0', borderTop:`1px solid ${t.border}`, alignItems:'start' }}>
+            <div key={s.tier} style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '120px 1fr', gap: isMobile ? '4px' : '0 20px', padding:'16px 0', borderTop:`1px solid ${t.border}`, alignItems:'start' }}>
               <div>
                 <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color: t.accent }}>{s.tier}</div>
                 <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'20px', fontWeight:400, color: t.fg, marginTop:'4px' }}>{s.price}</div>
@@ -665,6 +737,7 @@ const StøtOs = () => {
 /* ─── KONTAKT ──────────────────────────────────────────── */
 const Kontakt = () => {
   const t = React.useContext(ThemeCtx);
+  const isMobile = React.useContext(LayoutCtx);
   const [form, setForm] = React.useState({ navn:'', email:'', besked:'' });
   const [sent, setSent] = React.useState(false);
 
@@ -678,7 +751,7 @@ const Kontakt = () => {
 
   return (
     <section id="kontakt" style={{ background: t.sectionBg, padding:'80px clamp(20px,4vw,48px)' }}>
-      <div style={{ maxWidth:'900px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'clamp(32px,6vw,80px)' }}>
+      <div style={{ maxWidth:'900px', margin:'0 auto', display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'clamp(32px,6vw,80px)' }}>
         <div>
           <Label>Kontakt</Label>
           <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(2rem,3.5vw,3rem)', fontWeight:300, color: t.fg, margin:'14px 0 20px', letterSpacing:'-0.01em' }}>
@@ -746,10 +819,11 @@ const Kontakt = () => {
 /* ─── FOOTER ───────────────────────────────────────────── */
 const Footer = () => {
   const t = React.useContext(ThemeCtx);
+  const isMobile = React.useContext(LayoutCtx);
   return (
   <footer style={{ background: t.sectionBg, color: t.fg, padding:'56px clamp(20px,4vw,48px) 28px', borderTop:`1px solid ${t.border}` }}>
     <div style={{ maxWidth:'1080px', margin:'0 auto' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr 1fr', gap:'40px', marginBottom:'48px' }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr 1fr', gap: isMobile ? '28px' : '40px', marginBottom:'48px' }}>
         <div>
           <img src="assets/KRS-logo.jpg" alt="Kammerkoret Richters Skala"
             style={{ height:'44px', width:'auto', filter: t.dark ? 'invert(1) brightness(1.8)' : 'none', marginBottom:'16px' }} />
@@ -786,6 +860,7 @@ const App = () => {
     () => localStorage.getItem('krs-theme') !== 'light'
   );
   const [scrolled, setScrolled] = React.useState(false);
+  const isMobile = useIsMobile();
 
   const toggleTheme = () => setIsDark(d => {
     localStorage.setItem('krs-theme', d ? 'light' : 'dark');
@@ -802,6 +877,7 @@ const App = () => {
 
   return (
     <ThemeCtx.Provider value={theme}>
+    <LayoutCtx.Provider value={isMobile}>
       <div style={{ background: theme.bg, transition:'background 300ms' }}>
         <Header scrolled={scrolled} toggleTheme={toggleTheme} />
         <Hero />
@@ -814,6 +890,7 @@ const App = () => {
         <Kontakt />
         <Footer />
       </div>
+    </LayoutCtx.Provider>
     </ThemeCtx.Provider>
   );
 };
