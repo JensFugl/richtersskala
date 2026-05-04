@@ -319,13 +319,10 @@ const Optagelser = () => {
   const audioRef = React.useRef(null);
 
   React.useEffect(() => {
-    fetch(`${R2_BASE}/?list-type=2`)
-      .then(r => r.text())
-      .then(xml => {
-        const doc = new DOMParser().parseFromString(xml, 'application/xml');
-        const keys = Array.from(doc.querySelectorAll('Key'))
-          .map(el => el.textContent)
-          .filter(k => /\.(mp3|wav|ogg|flac|m4a)$/i.test(k));
+    fetch(`${R2_BASE}/recordings.json`)
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(data => {
+        const keys = Array.isArray(data) ? data : [];
         setRecordings(keys);
         setStatus(keys.length ? 'ready' : 'empty');
       })
