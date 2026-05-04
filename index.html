@@ -41,14 +41,7 @@ const PHOTOS = [
   { src:'assets/photo-candles.jpg',       caption:'Julekoncert, 2024' },
 ];
 
-const RECORDINGS = [
-  { title:'Lux Aurumque',                  composer:'Eric Whitacre',      duration:'4:12', year:'2024', concert:'Mørk er november' },
-  { title:'Northern Lights',               composer:'Ola Gjeilo',          duration:'5:48', year:'2024', concert:'Nordiske klange' },
-  { title:'Cantique de Jean Racine',       composer:'Gabriel Fauré',       duration:'6:03', year:'2023', concert:'Allehelgensaften' },
-  { title:'Stars',                         composer:'Eriks Ešenvalds',     duration:'7:21', year:'2023', concert:'Nordiske klange' },
-  { title:'Herr, wenn ich nur dich habe',  composer:'Heinrich Schütz',     duration:'3:55', year:'2024', concert:'Mørk er november' },
-  { title:'O Magnum Mysterium',            composer:'Morten Lauridsen',    duration:'5:14', year:'2024', concert:'Fra Mørket til Lyset' },
-];
+const R2_BASE = 'https://pub-0ff67d80d8d44fe48ade0bd5cc4e08e1.r2.dev';
 
 const VIDEOS = [
   { id:'v1', title:'Lux Aurumque — Live, Vor Frue Kirke',   year:'2024', duration:'4:12',  thumb:'assets/photo-singers-dark.jpg',  youtubeUrl:'' },
@@ -318,7 +311,64 @@ const Galleri = () => {
 
 /* ─── OPTAGELSER ───────────────────────────────────────── */
 const Optagelser = () => {
-  const [playing, setPlaying] = React.useState(null);
+  const [recordings, setRecordings] = React.useState([]);
+  const [status, setStatus] = React.useState('loading'); // 'loading' | 'ready' | 'error'
+  const [playingIdx, setPlayingIdx] = React.useState(null);
+  const [progress, setProgress] = React.useState(0);
+  const [duration, setDuration] = React.useState(0);
+  const audioRef = React.useRef(null);
+
+  React.useEffect(() => {
+    fetch(`${R2_BASE}/?list-type=2`)
+      .then(r => r.text())
+      .then(xml => {
+        const doc = new DOMParser().parseFromString(xml, 'application/xml');
+        const keys = Array.from(doc.querySelectorAll('Key'))
+          .map(el => el.textContent)
+          .filter(k => /\.(mp3|wav|ogg|flac|m4a)$/i.test(k));
+        setRecordings(keys);
+        setStatus(keys.length ? 'ready' : 'empty');
+      })
+      .catch(() => setStatus('error'));
+  }, []);
+
+  React.useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
+    const onMeta = () => setDuration(audio.duration);
+    const onEnd  = () => { setPlayingIdx(null); setProgress(0); };
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('loadedmetadata', onMeta);
+    audio.addEventListener('ended', onEnd);
+    return () => {
+      audio.removeEventListener('timeupdate', onTime);
+      audio.removeEventListener('loadedmetadata', onMeta);
+      audio.removeEventListener('ended', onEnd);
+    };
+  }, []);
+
+  const toggle = (i) => {
+    const audio = audioRef.current;
+    if (playingIdx === i) {
+      audio.pause();
+      setPlayingIdx(null);
+    } else {
+      audio.src = `${R2_BASE}/${encodeURIComponent(recordings[i])}`;
+      audio.play();
+      setPlayingIdx(i);
+      setProgress(0);
+    }
+  };
+
+  const fmtTime = (s) => {
+    if (!s || !isFinite(s)) return '';
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2,'0')}`;
+  };
+
+  const toTitle = (key) => key.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
 
   const WaveformSVG = ({ active }) => (
     <svg width="48" height="20" viewBox="0 0 48 20" fill="none">
@@ -334,23 +384,40 @@ const Optagelser = () => {
 
   return (
     <section id="optagelser" style={{ background: t.sectionBg, padding:'80px clamp(20px,4vw,48px)' }}>
+      <audio ref={audioRef} />
       <div style={{ maxWidth:'780px', margin:'0 auto' }}>
         <Label>Lyd</Label>
         <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(2rem,3.5vw,3rem)', fontWeight:300, color: t.fg, marginTop:'10px', marginBottom:'40px', letterSpacing:'-0.01em' }}>
           Optagelser
         </h2>
 
-        {RECORDINGS.map((r, i) => {
-          const isPlaying = playing === i;
+        {status === 'loading' && (
+          <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', fontStyle:'italic', color: t.fgMuted, padding:'18px 0' }}>
+            Henter optagelser…
+          </div>
+        )}
+        {status === 'error' && (
+          <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', fontStyle:'italic', color: t.fgMuted, padding:'18px 0' }}>
+            Optagelser er midlertidigt utilgængelige.
+          </div>
+        )}
+        {status === 'empty' && (
+          <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', fontStyle:'italic', color: t.fgMuted, padding:'18px 0' }}>
+            Ingen optagelser fundet.
+          </div>
+        )}
+
+        {status === 'ready' && recordings.map((key, i) => {
+          const isPlaying = playingIdx === i;
           return (
             <div key={i} style={{ display:'grid', gridTemplateColumns:'40px 1fr auto', gap:'0 20px', alignItems:'center',
               padding:'18px 0', borderTop:`1px solid ${t.border}`,
             }}>
-              <button onClick={() => setPlaying(isPlaying ? null : i)} style={{
+              <button onClick={() => toggle(i)} style={{
                 width:'40px', height:'40px', border:`1px solid ${isPlaying ? t.accent : t.border}`,
                 background: isPlaying ? t.accent : 'transparent',
                 display:'flex', alignItems:'center', justifyContent:'center',
-                transition:'all 200ms',
+                transition:'all 200ms', cursor:'pointer',
               }}>
                 {isPlaying ? (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="#0d0d0b">
@@ -363,29 +430,22 @@ const Optagelser = () => {
                 )}
               </button>
               <div>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'20px', fontWeight:400, color: t.fg, lineHeight:1.2 }}>{r.title}</div>
-                <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'14px', fontStyle:'italic', color: t.fgMuted, marginTop:'3px' }}>
-                  {r.composer} — {r.concert}, {r.year}
-                </div>
+                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'20px', fontWeight:400, color: t.fg, lineHeight:1.2 }}>{toTitle(key)}</div>
                 {isPlaying && (
                   <div style={{ marginTop:'10px', height:'3px', background: t.border, position:'relative' }}>
-                    <div style={{ position:'absolute', left:0, top:0, height:'100%', width:'35%', background: t.accent, transition:'width 200ms' }}></div>
+                    <div style={{ position:'absolute', left:0, top:0, height:'100%', width:`${progress * 100}%`, background: t.accent, transition:'width 200ms' }}></div>
                   </div>
                 )}
               </div>
               <div style={{ textAlign:'right' }}>
                 {isPlaying ? <WaveformSVG active /> : (
-                  <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color: t.fgMuted }}>{r.duration}</div>
+                  <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color: t.fgMuted }}>{fmtTime(duration)}</div>
                 )}
               </div>
             </div>
           );
         })}
-        <div style={{ borderTop:`1px solid ${t.border}` }}></div>
-
-        <div style={{ marginTop:'32px', fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', fontStyle:'italic', color: t.fgMuted }}>
-          Optagelser er tilgængelige via streaming-platforme. Kontakt os for presseadgang.
-        </div>
+        {status === 'ready' && <div style={{ borderTop:`1px solid ${t.border}` }}></div>}
       </div>
     </section>
   );
