@@ -31,6 +31,57 @@ const EVENTS = [
   { id:4, date:'13. december 2025',  day:'13',    month:'dec 2025', time:'', title:'Julekoncert',       venue:'Rundetårn',           type:'Julekoncert',     soldOut:false, price:'' },
 ];
 
+const DANISH_MONTHS = {
+  'januar':1,'februar':2,'marts':3,'april':4,'maj':5,'juni':6,
+  'juli':7,'august':8,'september':9,'oktober':10,'november':11,'december':12,
+};
+
+function parseDanishDate(dateStr) {
+  const [dayPart, monthPart, yearPart] = dateStr.trim().split(/\s+/);
+  return { day: parseInt(dayPart,10), month: DANISH_MONTHS[monthPart.toLowerCase()], year: parseInt(yearPart,10) };
+}
+
+function toICSDate(year, month, day) {
+  return `${year}${String(month).padStart(2,'0')}${String(day).padStart(2,'0')}`;
+}
+
+function downloadICS(ev) {
+  const start = parseDanishDate(ev.date);
+  const dayField = String(ev.day);
+  const dashIdx = dayField.search(/[–—-]/);
+  let endYear = start.year, endMonth = start.month, endDay;
+
+  const lastDay = dashIdx !== -1 ? parseInt(dayField.slice(dashIdx+1),10) : start.day;
+  endDay = lastDay + 1;
+  const daysInMonth = new Date(endYear, endMonth, 0).getDate();
+  if (endDay > daysInMonth) { endDay -= daysInMonth; endMonth += 1; }
+  if (endMonth > 12) { endMonth = 1; endYear += 1; }
+
+  const dtStart = toICSDate(start.year, start.month, start.day);
+  const dtEnd   = toICSDate(endYear, endMonth, endDay);
+  const uid     = `event-${ev.id}-${dtStart}@richtersskala.dk`;
+  const dtstamp = new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+
+  const ics = [
+    'BEGIN:VCALENDAR','VERSION:2.0',
+    'PRODID:-//Kammerkoret Richters Skala//DA',
+    'CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,`DTSTAMP:${dtstamp}`,
+    `DTSTART;VALUE=DATE:${dtStart}`,`DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${ev.title} – Kammerkoret Richters Skala`,
+    ev.venue ? `LOCATION:${ev.venue}` : null,
+    'END:VEVENT','END:VCALENDAR',
+  ].filter(Boolean).join('\r\n');
+
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `${ev.title.replace(/\s+/g,'-').toLowerCase()}.ics`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
 const PHOTOS = [
   { src:'assets/photo-choir-museum.jpg',  caption:'Emmaus, 2024' },
   { src:'assets/photo-singers-dark.jpg',  caption:'Emmaus, 2024' },
@@ -330,7 +381,7 @@ const Koncertkalender = () => {
                   ) : (
                     <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', letterSpacing:'0.1em', textTransform:'uppercase', color: t.fgMuted, padding:'12px', textAlign:'center', border:`1px solid ${t.border}`, marginBottom:'8px' }}>Udsolgt</div>
                   )}
-                  <button style={{
+                  <button onClick={() => downloadICS(e)} style={{
                     width:'100%', fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', fontWeight:500,
                     letterSpacing:'0.12em', textTransform:'uppercase',
                     background:'transparent', color: t.fgMuted, border:`1px solid ${t.border}`, padding:'11px',
