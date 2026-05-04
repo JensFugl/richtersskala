@@ -385,7 +385,7 @@ const Koncertkalender = () => {
                           background:'transparent', color: t.fgMuted, border:'none',
                           borderBottom:`1px solid ${t.border}`, padding:'11px', cursor:'pointer',
                         }}>Google Kalender</button>
-                        <a href={`/calendar/${e.id}.ics`} onClick={() => setCalMenu(null)} style={{
+                        <a href={`webcal://${window.location.host}/calendar/${e.id}.ics`} onClick={() => setCalMenu(null)} style={{
                           display:'block', width:'100%', textAlign:'left',
                           fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'9px', fontWeight:500,
                           letterSpacing:'0.12em', textTransform:'uppercase',
