@@ -9,7 +9,7 @@
 
 ## Struktur
 
-- index.html — hjemmesiden
-- print.html — printvenlig PDF-version
-- tweaks-panel.jsx — tema-panel komponent
+- index.html — hjemmesiden (single-file React app)
+- recordings.json, videos.json — afspilningsdata hentet ved load
+- calendar/*.ics — koncertkalender til Apple/Outlook
 - assets/ — billeder og logo
