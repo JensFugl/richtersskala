@@ -1,6 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" fill="#0d0d0b" rx="4"/>
-  <text x="16" y="22" font-family="'Cormorant Garamond', Georgia, serif"
-    font-size="17" font-weight="300" font-style="italic"
-    fill="#c8933a" text-anchor="middle">RS</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#0d0d0b" rx="14"/>
+  <path fill="#f7f5f0" d="
+    M 12,50
+    C 12,35 20,10 28,10
+    C 36,10 39,50 40,50
+    C 41,50 45,3 50,3
+    C 55,3 59,50 60,50
+    C 61,50 64,10 72,10
+    C 80,10 88,35 88,50
+    C 88,65 80,90 72,90
+    C 64,90 61,50 60,50
+    C 59,50 55,97 50,97
+    C 45,97 41,50 40,50
+    C 39,50 36,90 28,90
+    C 20,90 12,65 12,50
+    Z
+  "/>
+  <rect x="2" y="47" width="10" height="6" fill="#f7f5f0" rx="3"/>
+  <rect x="88" y="47" width="10" height="6" fill="#f7f5f0" rx="3"/>
 </svg>
