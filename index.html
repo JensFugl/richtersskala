@@ -116,7 +116,6 @@ const NAV = [
   { href:'#koncerter', label:'Koncerter' },
   { href:'#galleri',   label:'Galleri' },
   { href:'#optagelser',label:'Optagelser' },
-  { href:'#video',     label:'Video' },
   { href:'#om-koret',  label:'Om koret' },
   { href:'#støt-os',   label:'Støt os' },
   { href:'#kontakt',   label:'Kontakt' },
@@ -304,8 +303,9 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
         <div style={{
           position:'fixed', inset:0, zIndex:190,
           background:'var(--header-bg)', backdropFilter:'blur(12px)',
-          display:'flex', flexDirection:'column', justifyContent:'center',
-          padding:'80px 40px 48px',
+          display:'flex', flexDirection:'column',
+          padding:'88px 40px 40px',
+          overflowY:'auto',
         }}>
           <nav>
             <ul style={{ listStyle:'none' }}>
@@ -317,9 +317,22 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
                   </a>
                 </li>
               ))}
+              <li style={{ borderBottom:'1px solid var(--border)' }}>
+                <button onClick={toggleTheme}
+                  style={{
+                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                    width:'100%', padding:'20px 0', textAlign:'left',
+                  }}>
+                  <span className="display" style={{ fontSize:'28px' }}>
+                    {isDark ? 'Lyst tema' : 'Mørkt tema'}
+                  </span>
+                  <span style={{ display:'flex', alignItems:'center', opacity:0.7 }}>
+                    <ThemeToggleIcon dark={isDark} />
+                  </span>
+                </button>
+              </li>
             </ul>
           </nav>
-          <div style={{ marginTop:'40px' }}><ThemeToggle /></div>
         </div>
       )}
     </>
@@ -569,12 +582,18 @@ const Waveform = ({ active, accent, muted }) => (
 
 const Optagelser = () => {
   const t = React.useContext(ThemeCtx);
+  const isMobile = React.useContext(LayoutCtx);
+
   const [recordings, setRecordings] = React.useState([]);
-  const [status, setStatus] = React.useState('loading');
+  const [audioStatus, setAudioStatus] = React.useState('loading');
   const [playingIdx, setPlayingIdx] = React.useState(null);
   const [progress, setProgress] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
   const audioRef = React.useRef(null);
+
+  const [videos, setVideos] = React.useState([]);
+  const [videoStatus, setVideoStatus] = React.useState('loading');
+  const [lightbox, setLightbox] = React.useState(null);
 
   React.useEffect(() => {
     fetch('recordings.json')
@@ -582,9 +601,20 @@ const Optagelser = () => {
       .then(data => {
         const entries = Array.isArray(data) ? data : [];
         setRecordings(entries);
-        setStatus(entries.length ? 'ready' : 'empty');
+        setAudioStatus(entries.length ? 'ready' : 'empty');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => setAudioStatus('error'));
+  }, []);
+
+  React.useEffect(() => {
+    fetch('videos.json')
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(data => {
+        const entries = Array.isArray(data) ? data : [];
+        setVideos(entries);
+        setVideoStatus(entries.length ? 'ready' : 'empty');
+      })
+      .catch(() => setVideoStatus('error'));
   }, []);
 
   React.useEffect(() => {
@@ -602,6 +632,13 @@ const Optagelser = () => {
       audio.removeEventListener('ended', onEnd);
     };
   }, []);
+
+  React.useEffect(() => {
+    if (lightbox === null) return;
+    const onKey = e => { if (e.key === 'Escape') setLightbox(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightbox]);
 
   const toggle = (i) => {
     const audio = audioRef.current;
@@ -625,110 +662,83 @@ const Optagelser = () => {
   return (
     <section id="optagelser" className="section" style={{ background:'var(--section-bg)' }}>
       <audio ref={audioRef} />
-      <div style={{ maxWidth:'780px', margin:'0 auto' }}>
-        <div className="eyebrow">Lyd</div>
-        <h2 className="display h2" style={{ marginTop:'10px', marginBottom:'40px' }}>Optagelser</h2>
-
-        {status === 'loading' && <StatusMessage>Henter optagelser…</StatusMessage>}
-        {status === 'error'   && <StatusMessage>Optagelser er midlertidigt utilgængelige.</StatusMessage>}
-        {status === 'empty'   && <StatusMessage>Ingen optagelser fundet.</StatusMessage>}
-
-        {status === 'ready' && recordings.map((rec, i) => {
-          const isPlaying = playingIdx === i;
-          return (
-            <div key={i} style={{ display:'grid', gridTemplateColumns:'40px 1fr auto', gap:'0 20px', alignItems:'center', padding:'18px 0', borderTop:'1px solid var(--border)' }}>
-              <button onClick={() => toggle(i)} aria-label={isPlaying ? 'Pause' : 'Afspil'} style={{
-                width:'40px', height:'40px',
-                border:`1px solid ${isPlaying ? 'var(--accent)' : 'var(--border)'}`,
-                background: isPlaying ? 'var(--accent)' : 'transparent',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                transition:'all 200ms',
-              }}>
-                {isPlaying ? (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="#0d0d0b">
-                    <rect x="1" y="1" width="4" height="10" rx="0.5"/><rect x="7" y="1" width="4" height="10" rx="0.5"/>
-                  </svg>
-                ) : (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill={t.fg}>
-                    <path d="M2 1.5 L11 6 L2 10.5 Z"/>
-                  </svg>
-                )}
-              </button>
-              <div>
-                <div className="display" style={{ fontSize:'20px', fontWeight:400, lineHeight:1.2 }}>{rec.title}</div>
-                {isPlaying && (
-                  <div style={{ marginTop:'10px', height:'3px', background:'var(--border)', position:'relative' }}>
-                    <div style={{ position:'absolute', left:0, top:0, height:'100%', width:`${progress * 100}%`, background:'var(--accent)', transition:'width 200ms' }}></div>
-                  </div>
-                )}
-              </div>
-              <div style={{ textAlign:'right' }}>
-                {isPlaying
-                  ? <Waveform active accent={t.accent} muted={t.fgMuted} />
-                  : <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color:'var(--fg-muted)' }}>{fmtTime(duration)}</div>}
-              </div>
-            </div>
-          );
-        })}
-        {status === 'ready' && <div style={{ borderTop:'1px solid var(--border)' }}></div>}
-      </div>
-    </section>
-  );
-};
-
-/* ─── VIDEO ────────────────────────────────────────────── */
-const Video = () => {
-  const isMobile = React.useContext(LayoutCtx);
-  const [videos, setVideos] = React.useState([]);
-  const [status, setStatus] = React.useState('loading');
-  const [lightbox, setLightbox] = React.useState(null);
-
-  React.useEffect(() => {
-    fetch('videos.json')
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(data => {
-        const entries = Array.isArray(data) ? data : [];
-        setVideos(entries);
-        setStatus(entries.length ? 'ready' : 'empty');
-      })
-      .catch(() => setStatus('error'));
-  }, []);
-
-  React.useEffect(() => {
-    if (lightbox === null) return;
-    const onKey = e => { if (e.key === 'Escape') setLightbox(null); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [lightbox]);
-
-  return (
-    <section id="video" className="section" style={{ background:'var(--alt-section-bg)' }}>
       <div className="container">
-        <div className="eyebrow">Video</div>
-        <h2 className="display h2" style={{ marginTop:'10px', marginBottom:'40px' }}>Koncertoptagelser</h2>
+        <div className="eyebrow">Lyd og video</div>
+        <h2 className="display h2" style={{ marginTop:'10px', marginBottom:'48px' }}>Optagelser</h2>
 
-        {status === 'loading' && <StatusMessage>Henter optagelser…</StatusMessage>}
-        {status === 'error'   && <StatusMessage>Videoer er midlertidigt utilgængelige.</StatusMessage>}
-        {status === 'empty'   && <StatusMessage>Ingen videoer fundet.</StatusMessage>}
+        <div style={{ maxWidth:'780px', marginBottom:'72px' }}>
+          <div className="kicker" style={{ marginBottom:'18px' }}>Lyd</div>
 
-        {status === 'ready' && (
-          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap:'2px' }}>
-            {videos.map((v, i) => (
-              <div key={i} onClick={() => setLightbox(i)} className="video-card">
-                <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px' }}>
-                  <div className="play-circle">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="rgba(247,245,240,0.9)">
-                      <path d="M3 2 L14 8 L3 14 Z"/>
+          {audioStatus === 'loading' && <StatusMessage>Henter optagelser…</StatusMessage>}
+          {audioStatus === 'error'   && <StatusMessage>Optagelser er midlertidigt utilgængelige.</StatusMessage>}
+          {audioStatus === 'empty'   && <StatusMessage>Ingen optagelser fundet.</StatusMessage>}
+
+          {audioStatus === 'ready' && recordings.map((rec, i) => {
+            const isPlaying = playingIdx === i;
+            return (
+              <div key={i} style={{ display:'grid', gridTemplateColumns:'40px 1fr auto', gap:'0 20px', alignItems:'center', padding:'18px 0', borderTop:'1px solid var(--border)' }}>
+                <button onClick={() => toggle(i)} aria-label={isPlaying ? 'Pause' : 'Afspil'} style={{
+                  width:'40px', height:'40px',
+                  border:`1px solid ${isPlaying ? 'var(--accent)' : 'var(--border)'}`,
+                  background: isPlaying ? 'var(--accent)' : 'transparent',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  transition:'all 200ms',
+                }}>
+                  {isPlaying ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="#0d0d0b">
+                      <rect x="1" y="1" width="4" height="10" rx="0.5"/><rect x="7" y="1" width="4" height="10" rx="0.5"/>
                     </svg>
-                  </div>
-                  <div className="display" style={{ fontSize:'17px', fontWeight:400, color:'rgba(247,245,240,0.85)', lineHeight:1.3, textAlign:'center', padding:'0 20px', maxWidth:'260px' }}>
-                    {v.title}
-                  </div>
+                  ) : (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill={t.fg}>
+                      <path d="M2 1.5 L11 6 L2 10.5 Z"/>
+                    </svg>
+                  )}
+                </button>
+                <div>
+                  <div className="display" style={{ fontSize:'20px', fontWeight:400, lineHeight:1.2 }}>{rec.title}</div>
+                  {isPlaying && (
+                    <div style={{ marginTop:'10px', height:'3px', background:'var(--border)', position:'relative' }}>
+                      <div style={{ position:'absolute', left:0, top:0, height:'100%', width:`${progress * 100}%`, background:'var(--accent)', transition:'width 200ms' }}></div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  {isPlaying
+                    ? <Waveform active accent={t.accent} muted={t.fgMuted} />
+                    : <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color:'var(--fg-muted)' }}>{fmtTime(duration)}</div>}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            );
+          })}
+          {audioStatus === 'ready' && <div style={{ borderTop:'1px solid var(--border)' }}></div>}
+        </div>
+
+        <div>
+          <div className="kicker" style={{ marginBottom:'18px' }}>Video</div>
+
+          {videoStatus === 'loading' && <StatusMessage>Henter videoer…</StatusMessage>}
+          {videoStatus === 'error'   && <StatusMessage>Videoer er midlertidigt utilgængelige.</StatusMessage>}
+          {videoStatus === 'empty'   && <StatusMessage>Ingen videoer fundet.</StatusMessage>}
+
+          {videoStatus === 'ready' && (
+            <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap:'2px' }}>
+              {videos.map((v, i) => (
+                <div key={i} onClick={() => setLightbox(i)} className="video-card">
+                  <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px' }}>
+                    <div className="play-circle">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="rgba(247,245,240,0.9)">
+                        <path d="M3 2 L14 8 L3 14 Z"/>
+                      </svg>
+                    </div>
+                    <div className="display" style={{ fontSize:'17px', fontWeight:400, color:'rgba(247,245,240,0.85)', lineHeight:1.3, textAlign:'center', padding:'0 20px', maxWidth:'260px' }}>
+                      {v.title}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {lightbox !== null && (
@@ -1077,7 +1087,6 @@ const App = () => {
         <Koncertkalender />
         <Galleri />
         <Optagelser />
-        <Video />
         <OmKoret />
         <StøtOs />
         <Kontakt />
