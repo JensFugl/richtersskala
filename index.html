@@ -149,13 +149,14 @@ function eventStartDate(ev) {
 function formatCountdown(target, now) {
   const ms = target - now;
   if (ms <= 0) return null;
-  const minutes = Math.floor(ms / 60000);
-  const hours   = Math.floor(minutes / 60);
-  const days    = Math.floor(hours / 24);
-  if (days >= 1)  return `om ${days} ${days === 1 ? 'dag' : 'dage'}`;
-  if (hours >= 1) return `om ${hours} ${hours === 1 ? 'time' : 'timer'}`;
-  if (minutes >= 1) return `om ${minutes} ${minutes === 1 ? 'minut' : 'minutter'}`;
-  return 'starter nu';
+  const totalSec = Math.floor(ms / 1000);
+  const days  = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins  = Math.floor((totalSec % 3600) / 60);
+  const secs  = totalSec % 60;
+  const pad = n => String(n).padStart(2, '0');
+  const dayLabel = days === 1 ? 'dag' : 'dage';
+  return `${days} ${dayLabel} : ${pad(hours)} : ${pad(mins)} : ${pad(secs)}`;
 }
 
 function toICSDate(year, month, day) {
@@ -337,7 +338,7 @@ const Hero = () => {
     window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   React.useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -371,16 +372,23 @@ const Hero = () => {
       <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(13,13,11,0.9) 0%, rgba(13,13,11,0.2) 50%, transparent 100%)' }}></div>
 
       <div style={{ position:'relative', zIndex:2, padding:'0 clamp(20px,4vw,64px) clamp(48px,7vh,96px)', maxWidth:'900px' }}>
-        <div className="eyebrow">
-          {next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}
-          {countdown && <span style={{ marginLeft:'12px', color:'#c8933a' }}>· {countdown}</span>}
-        </div>
+        <div className="eyebrow">{next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}</div>
         <h1 className="display" style={{ fontSize:'clamp(3rem,6vw,5.8rem)', lineHeight:1.02, color:'#f7f5f0', margin:'16px 0 18px' }}>
           {next ? next.title : 'Kommende koncerter'}
         </h1>
-        <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'clamp(17px,1.6vw,21px)', fontStyle:'italic', lineHeight:1.65, color:'rgba(247,245,240,0.68)', marginBottom:'40px', maxWidth:'520px' }}>
+        <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'clamp(17px,1.6vw,21px)', fontStyle:'italic', lineHeight:1.65, color:'rgba(247,245,240,0.68)', marginBottom:countdown ? '20px' : '40px', maxWidth:'520px' }}>
           {next ? <>{next.type} — {next.date}{next.time ? `, kl. ${next.time}` : ''}<br />{next.venue}</> : null}
         </p>
+        {countdown && (
+          <div style={{
+            fontFamily:"'Outfit',system-ui,sans-serif",
+            fontSize:'clamp(18px,2vw,26px)', fontWeight:300, letterSpacing:'0.08em',
+            color:'#c8933a', fontVariantNumeric:'tabular-nums',
+            marginBottom:'40px',
+          }}>
+            {countdown}
+          </div>
+        )}
         <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
           <a href="#koncerter" className="btn" style={{ background:'#f7f5f0', color:'#0d0d0b' }}>Køb billetter</a>
           <a href="#koncerter" className="btn" style={{ background:'transparent', color:'#f7f5f0', border:'1px solid rgba(247,245,240,0.35)' }}>Se alle koncerter</a>
@@ -457,8 +465,6 @@ const Koncertkalender = () => {
                   </div>
                 </div>
                 <div style={{ minWidth:'160px' }}>
-                  <div className="display" style={{ fontSize:'28px', marginBottom:'4px' }}>{e.price}</div>
-                  <div className="italic-meta" style={{ fontSize:'13px', marginBottom:'16px' }}>Studerende halvpris</div>
                   {!e.soldOut ? (
                     <button className="btn btn-sm btn-light" style={{ width:'100%', padding:'12px', marginBottom:'8px' }}>Køb billetter</button>
                   ) : (
@@ -816,9 +822,9 @@ const OmKoret = () => {
 const StøtOs = () => {
   const isMobile = React.useContext(LayoutCtx);
   const tiers = [
-    { tier:'Sæsonpartner',  price:'kr. 25.000',   perks:'Logo i alle programmer, nævnelse ved alle koncerter, VIP-billetter' },
-    { tier:'Projektpartner',price:'kr. 10.000',   perks:'Logo i projektprogram, nævnelse ved koncert' },
-    { tier:'Støtter',       price:'Fra kr. 2.000',perks:'Nævnelse i program og på hjemmeside' },
+    { tier:'Sæsonpartner',  perks:'Logo i alle programmer, nævnelse ved alle koncerter, VIP-billetter' },
+    { tier:'Projektpartner',perks:'Logo i projektprogram, nævnelse ved koncert' },
+    { tier:'Støtter',       perks:'Nævnelse i program og på hjemmeside' },
   ];
   const sponsorsByTier = SPONSORS.reduce((acc, s) => { (acc[s.tier] = acc[s.tier] || []).push(s.name); return acc; }, {});
 
@@ -837,11 +843,8 @@ const StøtOs = () => {
             </p>
 
             {tiers.map(s => (
-              <div key={s.tier} style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '120px 1fr', gap: isMobile ? '4px' : '0 20px', padding:'16px 0', borderTop:'1px solid var(--border)', alignItems:'start' }}>
-                <div>
-                  <div className="tag" style={{ color:'var(--accent)' }}>{s.tier}</div>
-                  <div className="display" style={{ fontSize:'20px', fontWeight:400, marginTop:'4px' }}>{s.price}</div>
-                </div>
+              <div key={s.tier} style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '160px 1fr', gap: isMobile ? '4px' : '0 20px', padding:'16px 0', borderTop:'1px solid var(--border)', alignItems:'start' }}>
+                <div className="display" style={{ fontSize:'20px', fontWeight:400, color:'var(--accent)' }}>{s.tier}</div>
                 <div className="italic-meta" style={{ marginTop:'4px' }}>{s.perks}</div>
               </div>
             ))}
@@ -863,8 +866,8 @@ const StøtOs = () => {
 
             <div style={{ marginTop:'32px', padding:'28px', border:'1px solid var(--border)' }}>
               <div className="kicker" style={{ marginBottom:'10px' }}>A cappella-booking</div>
-              <div className="display" style={{ fontSize:'30px', marginBottom:'6px' }}>kr. 10.000</div>
-              <div className="italic-meta" style={{ marginBottom:'18px' }}>For en hel a cappella-koncert</div>
+              <div className="display" style={{ fontSize:'24px', marginBottom:'14px' }}>Book hele koret til en a cappella-koncert</div>
+              <div className="italic-meta" style={{ marginBottom:'18px' }}>Kontakt os for tilbud og tilgængelige datoer.</div>
               <a href="#kontakt" className="btn btn-sm btn-light">Kontakt os</a>
             </div>
           </div>
@@ -941,6 +944,48 @@ const Footer = () => {
   const isMobile = React.useContext(LayoutCtx);
   const magnitudeRef = React.useRef(0);
   const resetTimerRef = React.useRef(null);
+  const rumbleCtxRef = React.useRef(null);
+
+  const playRumble = (mag) => {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!rumbleCtxRef.current) rumbleCtxRef.current = new Ctx();
+      const ctx = rumbleCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+
+      const duration = 0.7 + mag * 0.05;
+      const sampleCount = Math.floor(ctx.sampleRate * duration);
+      const buffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < sampleCount; i++) data[i] = Math.random() * 2 - 1;
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const lowpass = ctx.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.value = 90 + mag * 6;
+      lowpass.Q.value = 0.8;
+
+      const peaking = ctx.createBiquadFilter();
+      peaking.type = 'peaking';
+      peaking.frequency.value = 55;
+      peaking.Q.value = 1.2;
+      peaking.gain.value = 6;
+
+      const gain = ctx.createGain();
+      const peakVol = Math.min(0.55, 0.08 + mag * 0.05);
+      const t0 = ctx.currentTime;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(peakVol, t0 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+      source.connect(lowpass).connect(peaking).connect(gain).connect(ctx.destination);
+      source.start(t0);
+      source.stop(t0 + duration);
+    } catch (_) {}
+  };
 
   const triggerTremor = () => {
     magnitudeRef.current = Math.min(9, magnitudeRef.current + 1);
@@ -954,6 +999,7 @@ const Footer = () => {
       const onEnd = () => { app.classList.remove('krs-shake'); app.removeEventListener('animationend', onEnd); };
       app.addEventListener('animationend', onEnd);
     }
+    playRumble(mag);
     console.log(
       `%cMagnitude ${mag.toFixed(1)} — det var en god koncert.`,
       'color:#c8933a;font-family:Georgia,serif;font-style:italic;font-size:13px;'
