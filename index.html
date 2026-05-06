@@ -8,8 +8,8 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -77,6 +77,7 @@
     0%, 100% { transform: scaleY(1); }
     50%      { transform: scaleY(var(--bar-peak, 1.6)); }
   }
+  .krs-bar { display: inline-block; }
   .krs-bar-active { animation: krs-bar-pulse 900ms ease-in-out infinite; }
 </style>
 </head>
@@ -188,15 +189,13 @@ function openGoogleCalendar(ev) {
 /* ─── THEME ────────────────────────────────────────────── */
 const themes = {
   dark: {
-    bg:'#0d0d0b', bgAlt:'#2a2825', fg:'#f7f5f0', fgMuted:'#8a8278',
-    fgSub:'rgba(247,245,240,0.55)', fgBody:'rgba(247,245,240,0.75)',
+    bg:'#0d0d0b', fg:'#f7f5f0', fgMuted:'#8a8278', fgBody:'rgba(247,245,240,0.75)',
     border:'#2a2825', borderLight:'#3a3835',
     accent:'#c8933a', headerBg:'rgba(13,13,11,0.92)', headerBorder:'#2a2825',
     cardBg:'#1a1917', sectionBg:'#0d0d0b', altSectionBg:'#1a1917', dark:true,
   },
   light: {
-    bg:'#f5f3ee', bgAlt:'#edeae3', fg:'#1a1917', fgMuted:'#7a7268',
-    fgSub:'rgba(26,25,23,0.55)', fgBody:'rgba(26,25,23,0.75)',
+    bg:'#f5f3ee', fg:'#1a1917', fgMuted:'#7a7268', fgBody:'rgba(26,25,23,0.75)',
     border:'#ddd9d1', borderLight:'#ccc8c0',
     accent:'#c8933a', headerBg:'rgba(245,243,238,0.92)', headerBorder:'#ddd9d1',
     cardBg:'#edeae3', sectionBg:'#f5f3ee', altSectionBg:'#edeae3', dark:false,
@@ -254,17 +253,17 @@ const ThemeToggleIcon = ({ dark }) => dark ? (
   </svg>
 );
 
+const ThemeToggle = ({ toggleTheme, isDark }) => (
+  <button onClick={toggleTheme} title="Skift farvetema"
+    style={{ padding:'4px', opacity:0.7, display:'flex', alignItems:'center' }}>
+    <ThemeToggleIcon dark={isDark} />
+  </button>
+);
+
 const Header = ({ scrolled, toggleTheme, isDark }) => {
   const isMobile = React.useContext(LayoutCtx);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const showBg = scrolled || menuOpen;
-
-  const ThemeToggle = () => (
-    <button onClick={toggleTheme} title="Skift farvetema"
-      style={{ padding:'4px', opacity:0.7, display:'flex', alignItems:'center' }}>
-      <ThemeToggleIcon dark={isDark} />
-    </button>
-  );
 
   return (
     <>
@@ -294,7 +293,7 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
                 {NAV.map(l => <li key={l.href}><a href={l.href} className="nav-link">{l.label}</a></li>)}
               </ul>
             </nav>
-            <ThemeToggle />
+            <ThemeToggle toggleTheme={toggleTheme} isDark={isDark} />
           </div>
         )}
       </header>
@@ -343,9 +342,9 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
 const Hero = () => {
   const [now, setNow] = React.useState(() => Date.now());
   const next = React.useMemo(() => {
-    const upcoming = EVENTS.filter(e => eventStartDate(e).getTime() > now);
+    const upcoming = EVENTS.filter(e => eventStartDate(e).getTime() > Date.now());
     return upcoming[0] || EVENTS[0] || null;
-  }, [now]);
+  }, []);
   const [scrollY, setScrollY] = React.useState(0);
   const [reducedMotion, setReducedMotion] = React.useState(() =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -588,8 +587,9 @@ const Optagelser = () => {
   const [audioStatus, setAudioStatus] = React.useState('loading');
   const [playingIdx, setPlayingIdx] = React.useState(null);
   const [progress, setProgress] = React.useState(0);
-  const [duration, setDuration] = React.useState(0);
+  const [durations, setDurations] = React.useState({});
   const audioRef = React.useRef(null);
+  const playingIdxRef = React.useRef(null);
 
   const [videos, setVideos] = React.useState([]);
   const [videoStatus, setVideoStatus] = React.useState('loading');
@@ -621,7 +621,7 @@ const Optagelser = () => {
     const audio = audioRef.current;
     if (!audio) return;
     const onTime = () => setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
-    const onMeta = () => setDuration(audio.duration);
+    const onMeta = () => setDurations(d => ({ ...d, [playingIdxRef.current]: audio.duration }));
     const onEnd  = () => { setPlayingIdx(null); setProgress(0); };
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('loadedmetadata', onMeta);
@@ -644,8 +644,10 @@ const Optagelser = () => {
     const audio = audioRef.current;
     if (playingIdx === i) {
       audio.pause();
+      playingIdxRef.current = null;
       setPlayingIdx(null);
     } else {
+      playingIdxRef.current = i;
       audio.src = recordings[i].url;
       audio.play().catch(err => console.warn('Afspilning mislykkedes:', err));
       setPlayingIdx(i);
@@ -705,7 +707,7 @@ const Optagelser = () => {
                 <div style={{ textAlign:'right' }}>
                   {isPlaying
                     ? <Waveform active accent={t.accent} muted={t.fgMuted} />
-                    : <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color:'var(--fg-muted)' }}>{fmtTime(duration)}</div>}
+                    : <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color:'var(--fg-muted)' }}>{fmtTime(durations[i])}</div>}
                 </div>
               </div>
             );
