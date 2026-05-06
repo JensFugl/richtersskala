@@ -58,6 +58,20 @@
   .field:focus { border-bottom-color: var(--accent); }
   .field-area { resize: none; border: 1px solid var(--border); padding: 12px 16px; }
   .field-area:focus { border-color: var(--accent); border-bottom-color: var(--accent); }
+
+  @keyframes krs-shake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(calc(var(--shake-amp, 1px) * -1), calc(var(--shake-amp, 1px) * 0.6)); }
+    20% { transform: translate(var(--shake-amp, 1px), calc(var(--shake-amp, 1px) * -0.8)); }
+    30% { transform: translate(calc(var(--shake-amp, 1px) * -0.8), var(--shake-amp, 1px)); }
+    40% { transform: translate(calc(var(--shake-amp, 1px) * 0.9), calc(var(--shake-amp, 1px) * -0.5)); }
+    50% { transform: translate(calc(var(--shake-amp, 1px) * -1), calc(var(--shake-amp, 1px) * 0.7)); }
+    60% { transform: translate(calc(var(--shake-amp, 1px) * 0.7), var(--shake-amp, 1px)); }
+    70% { transform: translate(calc(var(--shake-amp, 1px) * -0.6), calc(var(--shake-amp, 1px) * -0.9)); }
+    80% { transform: translate(calc(var(--shake-amp, 1px) * 0.8), calc(var(--shake-amp, 1px) * 0.4)); }
+    90% { transform: translate(calc(var(--shake-amp, 1px) * -0.3), calc(var(--shake-amp, 1px) * -0.5)); }
+  }
+  .krs-shake { animation: krs-shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
 </style>
 </head>
 <body>
@@ -118,6 +132,24 @@ const DANISH_MONTHS = {
 function parseDanishDate(dateStr) {
   const [dayPart, monthPart, yearPart] = dateStr.trim().split(/\s+/);
   return { day: parseInt(dayPart,10), month: DANISH_MONTHS[monthPart.toLowerCase()], year: parseInt(yearPart,10) };
+}
+
+function eventStartDate(ev) {
+  const { day, month, year } = parseDanishDate(ev.date);
+  const [h, m] = (ev.time || '').split(':').map(n => parseInt(n,10));
+  return new Date(year, month - 1, day, isFinite(h) ? h : 19, isFinite(m) ? m : 30);
+}
+
+function formatCountdown(target, now) {
+  const ms = target - now;
+  if (ms <= 0) return null;
+  const minutes = Math.floor(ms / 60000);
+  const hours   = Math.floor(minutes / 60);
+  const days    = Math.floor(hours / 24);
+  if (days >= 1)  return `om ${days} ${days === 1 ? 'dag' : 'dage'}`;
+  if (hours >= 1) return `om ${hours} ${hours === 1 ? 'time' : 'timer'}`;
+  if (minutes >= 1) return `om ${minutes} ${minutes === 1 ? 'minut' : 'minutter'}`;
+  return 'starter nu';
 }
 
 function toICSDate(year, month, day) {
@@ -290,19 +322,55 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
 /* ─── HERO ─────────────────────────────────────────────── */
 const Hero = () => {
   const next = EVENTS[0] || null;
+  const [now, setNow] = React.useState(() => Date.now());
+  const [scrollY, setScrollY] = React.useState(0);
+  const [reducedMotion, setReducedMotion] = React.useState(() =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  React.useEffect(() => {
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setScrollY(window.scrollY);
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onMq = e => setReducedMotion(e.matches);
+    mq.addEventListener('change', onMq);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      mq.removeEventListener('change', onMq);
+    };
+  }, []);
+
+  const countdown = next ? formatCountdown(eventStartDate(next), now) : null;
+  const parallaxY = (reducedMotion || scrollY > window.innerHeight) ? 0 : scrollY * 0.3;
+
   return (
     <section id="top" style={{ position:'relative', width:'100%', height:'100vh', overflow:'hidden', display:'flex', alignItems:'flex-end' }}>
       <img src="assets/photo-choir-museum.jpg" alt=""
-        style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(0.48)' }} />
+        style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(0.48)', transform:`translate3d(0, ${parallaxY}px, 0)`, willChange:'transform' }} />
       <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(13,13,11,0.9) 0%, rgba(13,13,11,0.2) 50%, transparent 100%)' }}></div>
 
       <div style={{ position:'relative', zIndex:2, padding:'0 clamp(20px,4vw,64px) clamp(48px,7vh,96px)', maxWidth:'900px' }}>
-        <div className="eyebrow">{next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}</div>
+        <div className="eyebrow">
+          {next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}
+          {countdown && <span style={{ marginLeft:'12px', color:'#c8933a' }}>· {countdown}</span>}
+        </div>
         <h1 className="display" style={{ fontSize:'clamp(3rem,6vw,5.8rem)', lineHeight:1.02, color:'#f7f5f0', margin:'16px 0 18px' }}>
           {next ? next.title : 'Kommende koncerter'}
         </h1>
         <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'clamp(17px,1.6vw,21px)', fontStyle:'italic', lineHeight:1.65, color:'rgba(247,245,240,0.68)', marginBottom:'40px', maxWidth:'520px' }}>
-          {next ? <>{next.type} — {next.date}, kl. {next.time}<br />{next.venue}</> : null}
+          {next ? <>{next.type} — {next.date}{next.time ? `, kl. ${next.time}` : ''}<br />{next.venue}</> : null}
         </p>
         <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
           <a href="#koncerter" className="btn" style={{ background:'#f7f5f0', color:'#0d0d0b' }}>Køb billetter</a>
@@ -434,7 +502,7 @@ const Galleri = () => {
           return (
             <div key={i} onClick={() => setLightbox(i)} className="gallery-cell"
               style={{ aspectRatio: wide ? '16/9' : '4/3', gridColumn: wide ? 'span 2' : 'span 1' }}>
-              <img src={p.src} alt={p.caption} />
+              <img src={p.src} alt={p.caption} loading="lazy" decoding="async" />
               <div className="caption">{p.caption}</div>
             </div>
           );
@@ -462,6 +530,46 @@ const Galleri = () => {
 };
 
 /* ─── OPTAGELSER ───────────────────────────────────────── */
+const STATIC_BARS = [4,8,14,6,18,10,16,8,12,6,14,10];
+
+const Waveform = ({ active, analyserRef, accent, muted }) => {
+  const rectRefs = React.useRef([]);
+
+  React.useEffect(() => {
+    if (!active || !analyserRef || !analyserRef.current) return;
+    const analyser = analyserRef.current;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    let raf;
+    const tick = () => {
+      analyser.getByteFrequencyData(data);
+      for (let i = 0; i < STATIC_BARS.length; i++) {
+        const rect = rectRefs.current[i];
+        if (!rect) continue;
+        const v = data[i + 1] || 0;
+        const h = Math.max(2, (v / 255) * 18);
+        rect.setAttribute('height', h.toFixed(2));
+        rect.setAttribute('y', ((20 - h) / 2).toFixed(2));
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active, analyserRef]);
+
+  return (
+    <svg width="48" height="20" viewBox="0 0 48 20" fill="none">
+      {STATIC_BARS.map((h, i) => (
+        <rect key={i} ref={el => rectRefs.current[i] = el}
+          x={i*4} y={(20-h)/2} width="2.5" rx="1.25" height={h}
+          fill={active ? accent : muted}
+          style={{ transition:'fill 200ms' }}
+          opacity={active ? (0.5 + (i%3)*0.17) : 0.5}
+        />
+      ))}
+    </svg>
+  );
+};
+
 const Optagelser = () => {
   const t = React.useContext(ThemeCtx);
   const [recordings, setRecordings] = React.useState([]);
@@ -470,6 +578,9 @@ const Optagelser = () => {
   const [progress, setProgress] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
   const audioRef = React.useRef(null);
+  const audioCtxRef = React.useRef(null);
+  const analyserRef = React.useRef(null);
+  const sourceRef = React.useRef(null);
 
   React.useEffect(() => {
     fetch('recordings.json')
@@ -498,12 +609,34 @@ const Optagelser = () => {
     };
   }, []);
 
+  const ensureAudioGraph = () => {
+    if (sourceRef.current) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const source = ctx.createMediaElementSource(audioRef.current);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.7;
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      audioCtxRef.current = ctx;
+      sourceRef.current = source;
+      analyserRef.current = analyser;
+    } catch (_) {}
+  };
+
   const toggle = (i) => {
     const audio = audioRef.current;
     if (playingIdx === i) {
       audio.pause();
       setPlayingIdx(null);
     } else {
+      ensureAudioGraph();
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
       audio.src = recordings[i].url;
       audio.play();
       setPlayingIdx(i);
@@ -516,18 +649,6 @@ const Optagelser = () => {
     const m = Math.floor(s / 60), sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2,'0')}`;
   };
-
-  const Waveform = ({ active }) => (
-    <svg width="48" height="20" viewBox="0 0 48 20" fill="none">
-      {[4,8,14,6,18,10,16,8,12,6,14,10].map((h,i) => (
-        <rect key={i} x={i*4} y={(20-h)/2} width="2.5" rx="1.25" height={h}
-          fill={active ? t.accent : t.fgMuted}
-          style={{ transition:'fill 200ms' }}
-          opacity={active ? (0.5 + (i%3)*0.17) : 0.5}
-        />
-      ))}
-    </svg>
-  );
 
   return (
     <section id="optagelser" className="section" style={{ background:'var(--section-bg)' }}>
@@ -571,7 +692,7 @@ const Optagelser = () => {
               </div>
               <div style={{ textAlign:'right' }}>
                 {isPlaying
-                  ? <Waveform active />
+                  ? <Waveform active analyserRef={analyserRef} accent={t.accent} muted={t.fgMuted} />
                   : <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color:'var(--fg-muted)' }}>{fmtTime(duration)}</div>}
               </div>
             </div>
@@ -679,7 +800,7 @@ const OmKoret = () => {
     <section id="om-koret" style={{ background:'var(--section-bg)' }}>
       <div style={{ display:'grid', gridTemplateColumns: cols, minHeight: isMobile ? 'unset' : '540px' }}>
         <div style={{ overflow:'hidden', position:'relative', height: imgHeight }}>
-          <img src="assets/photo-choir-full.jpg" alt="Kammerkoret Richters Skala"
+          <img src="assets/photo-choir-full.jpg" alt="Kammerkoret Richters Skala" loading="lazy" decoding="async"
             style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', filter:'brightness(0.68)' }} />
           {!isMobile && <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, transparent, rgba(13,13,11,0.5))' }}></div>}
         </div>
@@ -717,7 +838,7 @@ const OmKoret = () => {
           </div>
         </div>
         <div style={{ overflow:'hidden', height: imgHeight }}>
-          <img src="assets/photo-conductor.jpg" alt="Laus Richter Larsen"
+          <img src="assets/photo-conductor.jpg" alt="Laus Richter Larsen" loading="lazy" decoding="async"
             style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 15%', filter:'brightness(0.75)' }} />
         </div>
       </div>
@@ -852,6 +973,29 @@ const Kontakt = () => {
 /* ─── FOOTER ───────────────────────────────────────────── */
 const Footer = () => {
   const isMobile = React.useContext(LayoutCtx);
+  const magnitudeRef = React.useRef(0);
+  const resetTimerRef = React.useRef(null);
+
+  const triggerTremor = () => {
+    magnitudeRef.current = Math.min(9, magnitudeRef.current + 1);
+    const mag = magnitudeRef.current;
+    const app = document.querySelector('.app');
+    if (app) {
+      app.style.setProperty('--shake-amp', `${(mag * 0.6).toFixed(2)}px`);
+      app.classList.remove('krs-shake');
+      void app.offsetWidth;
+      app.classList.add('krs-shake');
+      const onEnd = () => { app.classList.remove('krs-shake'); app.removeEventListener('animationend', onEnd); };
+      app.addEventListener('animationend', onEnd);
+    }
+    console.log(
+      `%cMagnitude ${mag.toFixed(1)} — det var en god koncert.`,
+      'color:#c8933a;font-family:Georgia,serif;font-style:italic;font-size:13px;'
+    );
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = setTimeout(() => { magnitudeRef.current = 0; }, 5000);
+  };
+
   return (
     <footer style={{ background:'var(--section-bg)', padding:'56px clamp(20px,4vw,48px) 28px', borderTop:'1px solid var(--border)' }}>
       <div className="container">
@@ -884,7 +1028,7 @@ const Footer = () => {
           </div>
         </div>
         <div style={{ borderTop:'1px solid var(--border)', paddingTop:'18px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em' }}>© 2025 Kammerkoret Richters Skala</div>
+          <div onClick={triggerTremor} style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em', userSelect:'none' }}>© 2025 Kammerkoret Richters Skala</div>
           <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em' }}>richtersskala.dk</div>
         </div>
       </div>
