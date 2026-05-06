@@ -321,8 +321,11 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
 
 /* ─── HERO ─────────────────────────────────────────────── */
 const Hero = () => {
-  const next = EVENTS[0] || null;
   const [now, setNow] = React.useState(() => Date.now());
+  const next = React.useMemo(() => {
+    const upcoming = EVENTS.filter(e => eventStartDate(e).getTime() > now);
+    return upcoming[0] || EVENTS[0] || null;
+  }, [now]);
   const [scrollY, setScrollY] = React.useState(0);
   const [reducedMotion, setReducedMotion] = React.useState(() =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -652,7 +655,7 @@ const Optagelser = () => {
 
   return (
     <section id="optagelser" className="section" style={{ background:'var(--section-bg)' }}>
-      <audio ref={audioRef} />
+      <audio ref={audioRef} crossOrigin="anonymous" />
       <div style={{ maxWidth:'780px', margin:'0 auto' }}>
         <div className="eyebrow">Lyd</div>
         <h2 className="display h2" style={{ marginTop:'10px', marginBottom:'40px' }}>Optagelser</h2>
@@ -1001,7 +1004,9 @@ const Footer = () => {
       <div className="container">
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr 1fr', gap: isMobile ? '28px' : '40px', marginBottom:'48px' }}>
           <div>
-            <Logo height={44} marginBottom="16px" />
+            <span onClick={triggerTremor} style={{ display:'inline-block', cursor:'default', userSelect:'none' }}>
+              <Logo height={44} marginBottom="16px" />
+            </span>
             <p className="italic-meta" style={{ lineHeight:1.7 }}>
               Et danskbaseret kammerkor med høj musikalsk ambition og en forkærlighed for nordisk musik.
             </p>
@@ -1028,7 +1033,7 @@ const Footer = () => {
           </div>
         </div>
         <div style={{ borderTop:'1px solid var(--border)', paddingTop:'18px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div onClick={triggerTremor} style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em', userSelect:'none' }}>© 2025 Kammerkoret Richters Skala</div>
+          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em' }}>© 2025 Kammerkoret Richters Skala</div>
           <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em' }}>richtersskala.dk</div>
         </div>
       </div>
