@@ -72,6 +72,12 @@
     90% { transform: translate(calc(var(--shake-amp, 1px) * -0.3), calc(var(--shake-amp, 1px) * -0.5)); }
   }
   .krs-shake { animation: krs-shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
+
+  @keyframes krs-bar-pulse {
+    0%, 100% { transform: scaleY(1); }
+    50%      { transform: scaleY(var(--bar-peak, 1.6)); }
+  }
+  .krs-bar-active { animation: krs-bar-pulse 900ms ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -535,43 +541,25 @@ const Galleri = () => {
 /* ─── OPTAGELSER ───────────────────────────────────────── */
 const STATIC_BARS = [4,8,14,6,18,10,16,8,12,6,14,10];
 
-const Waveform = ({ active, analyserRef, accent, muted }) => {
-  const rectRefs = React.useRef([]);
-
-  React.useEffect(() => {
-    if (!active || !analyserRef || !analyserRef.current) return;
-    const analyser = analyserRef.current;
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    let raf;
-    const tick = () => {
-      analyser.getByteFrequencyData(data);
-      for (let i = 0; i < STATIC_BARS.length; i++) {
-        const rect = rectRefs.current[i];
-        if (!rect) continue;
-        const v = data[i + 1] || 0;
-        const h = Math.max(2, (v / 255) * 18);
-        rect.setAttribute('height', h.toFixed(2));
-        rect.setAttribute('y', ((20 - h) / 2).toFixed(2));
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [active, analyserRef]);
-
-  return (
-    <svg width="48" height="20" viewBox="0 0 48 20" fill="none">
-      {STATIC_BARS.map((h, i) => (
-        <rect key={i} ref={el => rectRefs.current[i] = el}
-          x={i*4} y={(20-h)/2} width="2.5" rx="1.25" height={h}
-          fill={active ? accent : muted}
-          style={{ transition:'fill 200ms' }}
-          opacity={active ? (0.5 + (i%3)*0.17) : 0.5}
-        />
-      ))}
-    </svg>
-  );
-};
+const Waveform = ({ active, accent, muted }) => (
+  <svg width="48" height="20" viewBox="0 0 48 20" fill="none">
+    {STATIC_BARS.map((h, i) => (
+      <rect key={i}
+        className={active ? 'krs-bar krs-bar-active' : 'krs-bar'}
+        x={i*4} y={(20-h)/2} width="2.5" rx="1.25" height={h}
+        fill={active ? accent : muted}
+        style={{
+          transition:'fill 200ms',
+          animationDelay: active ? `${(i % 6) * 90}ms` : '0ms',
+          ['--bar-peak']: active ? (1.2 + (i % 4) * 0.35).toFixed(2) : '1',
+          transformBox: 'fill-box',
+          transformOrigin: 'center',
+        }}
+        opacity={active ? (0.5 + (i%3)*0.17) : 0.5}
+      />
+    ))}
+  </svg>
+);
 
 const Optagelser = () => {
   const t = React.useContext(ThemeCtx);
@@ -581,9 +569,6 @@ const Optagelser = () => {
   const [progress, setProgress] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
   const audioRef = React.useRef(null);
-  const audioCtxRef = React.useRef(null);
-  const analyserRef = React.useRef(null);
-  const sourceRef = React.useRef(null);
 
   React.useEffect(() => {
     fetch('recordings.json')
@@ -612,36 +597,14 @@ const Optagelser = () => {
     };
   }, []);
 
-  const ensureAudioGraph = () => {
-    if (sourceRef.current) return;
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      const source = ctx.createMediaElementSource(audioRef.current);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
-      analyser.smoothingTimeConstant = 0.7;
-      source.connect(analyser);
-      analyser.connect(ctx.destination);
-      audioCtxRef.current = ctx;
-      sourceRef.current = source;
-      analyserRef.current = analyser;
-    } catch (_) {}
-  };
-
   const toggle = (i) => {
     const audio = audioRef.current;
     if (playingIdx === i) {
       audio.pause();
       setPlayingIdx(null);
     } else {
-      ensureAudioGraph();
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume();
-      }
       audio.src = recordings[i].url;
-      audio.play();
+      audio.play().catch(err => console.warn('Afspilning mislykkedes:', err));
       setPlayingIdx(i);
       setProgress(0);
     }
@@ -655,7 +618,7 @@ const Optagelser = () => {
 
   return (
     <section id="optagelser" className="section" style={{ background:'var(--section-bg)' }}>
-      <audio ref={audioRef} crossOrigin="anonymous" />
+      <audio ref={audioRef} />
       <div style={{ maxWidth:'780px', margin:'0 auto' }}>
         <div className="eyebrow">Lyd</div>
         <h2 className="display h2" style={{ marginTop:'10px', marginBottom:'40px' }}>Optagelser</h2>
@@ -695,7 +658,7 @@ const Optagelser = () => {
               </div>
               <div style={{ textAlign:'right' }}>
                 {isPlaying
-                  ? <Waveform active analyserRef={analyserRef} accent={t.accent} muted={t.fgMuted} />
+                  ? <Waveform active accent={t.accent} muted={t.fgMuted} />
                   : <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color:'var(--fg-muted)' }}>{fmtTime(duration)}</div>}
               </div>
             </div>
