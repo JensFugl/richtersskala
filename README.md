@@ -10,6 +10,6 @@
 ## Struktur
 
 - index.html — hjemmesiden (single-file React app)
+- concerts.json — koncertdata synkroniseret fra Google Sheets
 - recordings.json, videos.json — afspilningsdata hentet ved load
-- calendar/*.ics — koncertkalender til Apple/Outlook
 - assets/ — billeder og logo
