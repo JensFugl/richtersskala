@@ -20,6 +20,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Fetch sheet and update concerts.json
+        env:
+          SHEETS_API_KEY: ${{ secrets.SHEETS_API_KEY }}
         run: python3 .github/scripts/sync_concerts.py
 
       - name: Commit if concerts.json changed

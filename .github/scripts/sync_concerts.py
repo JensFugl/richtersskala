@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Fetch the concert schedule from Google Sheets (published CSV) and write concerts.json."""
+"""Fetch the concert schedule from Google Sheets API v4 and write concerts.json.
 
-import csv
+Requires the sheet to be shared as 'Anyone with the link can view' and a
+Google Sheets API key stored in the SHEETS_API_KEY environment variable.
+"""
+
 import json
+import os
 import sys
+import urllib.parse
 import urllib.request
 from datetime import datetime
 
 SHEET_ID = "1E2w7kju5AWI8PF-Xs3PpVoBV6vawBXW9xu40Ym5STZs"
-CSV_URL = (
-    f"https://docs.google.com/spreadsheets/d/{SHEET_ID}"
-    "/pub?gid=0&single=true&output=csv"
-)
+RANGE    = "Sheet1!A:G"
 
 # Danish month names: number → (full, abbreviated)
 DANISH_MONTHS = {
@@ -41,33 +43,50 @@ def parse_date(date_str):
     }
 
 
-def fetch_csv():
-    req = urllib.request.Request(CSV_URL, headers={"User-Agent": "sync-concerts/1.0"})
+def fetch_rows(api_key):
+    url = (
+        f"https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}"
+        f"/values/{urllib.parse.quote(RANGE)}?key={urllib.parse.quote(api_key)}"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "sync-concerts/1.0"})
     with urllib.request.urlopen(req, timeout=15) as response:
-        return response.read().decode("utf-8-sig")
+        data = json.loads(response.read().decode("utf-8"))
+    return data.get("values", [])
 
 
-def convert(content):
-    reader = csv.DictReader(content.splitlines())
+def convert(rows):
+    if not rows:
+        return []
+
+    headers = [h.strip() for h in rows[0]]
+
+    # Map expected column names to their index (tolerates extra/missing columns)
+    col = {h: i for i, h in enumerate(headers)}
+
+    def get(row, name):
+        i = col.get(name)
+        return row[i].strip() if i is not None and i < len(row) else ""
+
     concerts = []
-    for i, row in enumerate(reader, start=1):
-        title   = row.get("Koncert navn", "").strip()
-        venue   = row.get("Sted(kirkens navn fx)", "").strip()
-        address = row.get("Adresse", "").strip()
-        date_str = row.get("Dato", "").strip()
-        time_val = row.get("Tid", "").strip()
-        price    = row.get("Pris", "").strip()
-        desc     = row.get("Beskrivelse af koncerten", "").strip()
-
+    concert_id = 1
+    for row in rows[1:]:
+        date_str = get(row, "Dato")
         if not date_str:
             continue
+
+        title   = get(row, "Koncert navn")
+        venue   = get(row, "Sted(kirkens navn fx)")
+        address = get(row, "Adresse")
+        time_val = get(row, "Tid")
+        price    = get(row, "Pris")
+        desc     = get(row, "Beskrivelse af koncerten")
 
         # Use venue name as title when title cell is empty
         if not title:
             title = venue
 
         concerts.append({
-            "id": i,
+            "id": concert_id,
             **parse_date(date_str),
             "time":        time_val,
             "title":       title,
@@ -77,17 +96,24 @@ def convert(content):
             "description": desc,
             "soldOut":     False,
         })
+        concert_id += 1
+
     return concerts
 
 
 def main():
+    api_key = os.environ.get("SHEETS_API_KEY", "").strip()
+    if not api_key:
+        print("ERROR: SHEETS_API_KEY environment variable is not set", file=sys.stderr)
+        sys.exit(1)
+
     try:
-        content = fetch_csv()
+        rows = fetch_rows(api_key)
     except Exception as exc:
         print(f"ERROR: could not fetch sheet — {exc}", file=sys.stderr)
         sys.exit(1)
 
-    concerts = convert(content)
+    concerts = convert(rows)
     if not concerts:
         print("ERROR: no concerts parsed from sheet", file=sys.stderr)
         sys.exit(1)
