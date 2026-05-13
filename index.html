@@ -86,12 +86,6 @@
 <script type="text/babel">
 
 /* ─── DATA ─────────────────────────────────────────────── */
-const EVENTS = [
-  { id:1, date:'16. juni 2026',      day:'16',    month:'jun 2026', time:'', title:'Sommerkoncert',     venue:'',                   type:'Sommerkoncert',   soldOut:false, price:'' },
-  { id:2, date:'13. september 2026', day:'13',    month:'sep 2026', time:'', title:'Brønshøj Vandtårn', venue:'Brønshøj Vandtårn',  type:'Efterårskoncert', soldOut:false, price:'' },
-  { id:3, date:'17. september 2026', day:'17–20', month:'sep 2026', time:'', title:'Bornholm Turné',    venue:'Bornholm',            type:'Turné',           soldOut:false, price:'' },
-  { id:4, date:'13. december 2026',  day:'13',    month:'dec 2026', time:'', title:'Julekoncert',       venue:'Rundetårn',           type:'Julekoncert',     soldOut:false, price:'' },
-];
 
 const PHOTOS = [
   { src:'assets/photo-choir-museum.jpg',  caption:'Emmaus, 2024' },
@@ -186,6 +180,25 @@ function openGoogleCalendar(ev) {
   window.open(`https://calendar.google.com/calendar/render?${params}`, '_blank');
 }
 
+function downloadICS(ev) {
+  const { dtStart, dtEnd } = eventDates(ev);
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0',
+    'PRODID:-//Kammerkoret Richters Skala//DA',
+    'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+    `UID:event-${ev.id}-${dtStart}@richtersskala.dk`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)}Z`,
+    `DTSTART;VALUE=DATE:${dtStart}`, `DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${ev.title} – Kammerkoret Richters Skala`,
+    ...(ev.venue ? [`LOCATION:${ev.venue}${ev.address ? ', ' + ev.address : ''}`] : []),
+    'END:VEVENT', 'END:VCALENDAR',
+  ];
+  const blob = new Blob([lines.join('\r\n')], { type:'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), { href:url, download:`koncert-${ev.id}.ics` }).click();
+  URL.revokeObjectURL(url);
+}
+
 /* ─── THEME ────────────────────────────────────────────── */
 const themes = {
   dark: {
@@ -211,6 +224,7 @@ const themeVars = (t) => ({
 
 const ThemeCtx = React.createContext(themes.dark);
 const LayoutCtx = React.createContext(false);
+const EventsCtx = React.createContext([]);
 
 const useIsMobile = () => {
   const [mobile, setMobile] = React.useState(() => window.innerWidth < 768);
@@ -340,11 +354,12 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
 
 /* ─── HERO ─────────────────────────────────────────────── */
 const Hero = () => {
+  const events = React.useContext(EventsCtx);
   const [now, setNow] = React.useState(() => Date.now());
   const next = React.useMemo(() => {
-    const upcoming = EVENTS.filter(e => eventStartDate(e).getTime() > Date.now());
-    return upcoming[0] || EVENTS[0] || null;
-  }, []);
+    const upcoming = events.filter(e => eventStartDate(e).getTime() > Date.now());
+    return upcoming[0] || events[0] || null;
+  }, [events]);
   const [scrollY, setScrollY] = React.useState(0);
   const [reducedMotion, setReducedMotion] = React.useState(() =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -389,7 +404,7 @@ const Hero = () => {
           {next ? next.title : 'Kommende koncerter'}
         </h1>
         <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'clamp(17px,1.6vw,21px)', fontStyle:'italic', lineHeight:1.65, color:'rgba(247,245,240,0.68)', marginBottom:countdown ? '20px' : '40px', maxWidth:'520px' }}>
-          {next ? <>{next.type} — {next.date}{next.time ? `, kl. ${next.time}` : ''}<br />{next.venue}</> : null}
+          {next ? <>{next.date}{next.time && next.time !== 'TBA' ? `, kl. ${next.time}` : ''}<br />{next.venue}</> : null}
         </p>
         {countdown && (
           <div style={{
@@ -419,6 +434,7 @@ const Hero = () => {
 /* ─── KONCERTKALENDER ──────────────────────────────────── */
 const Koncertkalender = () => {
   const isMobile = React.useContext(LayoutCtx);
+  const events = React.useContext(EventsCtx);
   const [expanded, setExpanded] = React.useState(null);
   const [calMenu, setCalMenu] = React.useState(null);
 
@@ -427,13 +443,13 @@ const Koncertkalender = () => {
       <div className="container">
         <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'40px', paddingBottom:'20px', borderBottom:'1px solid var(--border)' }}>
           <div>
-            <div className="eyebrow">Sæson 2025</div>
+            <div className="eyebrow">Sæson 2026</div>
             <h2 className="display h2" style={{ marginTop:'10px' }}>Kommende koncerter</h2>
           </div>
-          <div className="italic-meta">{EVENTS.length} koncerter</div>
+          <div className="italic-meta">{events.length} koncerter</div>
         </div>
 
-        {EVENTS.map((e, i) => (
+        {events.map((e, i) => (
           <div key={e.id}>
             <div
               onClick={() => setExpanded(expanded === e.id ? null : e.id)}
@@ -449,12 +465,11 @@ const Koncertkalender = () => {
                 <div className="tag" style={{ marginTop:'3px' }}>{e.month}</div>
               </div>
               <div style={{ paddingLeft:'4px' }}>
-                <div className="tag" style={{ marginBottom:'6px' }}>{e.type}</div>
                 <div className="display" style={{ fontSize:'clamp(18px,2vw,24px)', fontWeight:400, lineHeight:1.2 }}>{e.title}</div>
                 <div className="italic-meta" style={{ marginTop:'4px' }}>{e.venue}</div>
               </div>
               <div style={{ textAlign:'right' }}>
-                <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'13px', color:'var(--fg-muted)' }}>{e.time}</div>
+                <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'13px', color:'var(--fg-muted)' }}>{e.time !== 'TBA' ? e.time : ''}</div>
                 <div className="tag" style={{ color: e.soldOut ? 'var(--fg-muted)' : 'var(--accent)', marginTop:'6px' }}>
                   {e.soldOut ? 'Udsolgt' : 'Billetter'}
                 </div>
@@ -464,11 +479,11 @@ const Koncertkalender = () => {
             {expanded === e.id && (
               <div style={{ background:'var(--card-bg)', border:'1px solid var(--border)', padding: isMobile ? '20px' : '28px 32px', marginBottom:'2px', display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto', gap: isMobile ? '20px' : '32px', alignItems:'start' }}>
                 <div>
-                  <div className="body" style={{ marginBottom:'16px' }}>
-                    En aften med kammerkorets fortolkning af tidløs kormusik i en af Københavns smukkeste kirker. Programmet rummer værker fra renæssancen til det 21. århundrede.
-                  </div>
-                  <div style={{ display:'flex', gap:'36px', marginTop:'8px' }}>
-                    {[['Dato', e.date], ['Kl.', e.time], ['Sted', e.venue]].map(([k,v]) => (
+                  {e.description && e.description !== 'TBA' && (
+                    <div className="body" style={{ marginBottom:'16px' }}>{e.description}</div>
+                  )}
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:'24px 36px', marginTop:'8px' }}>
+                    {[['Dato', e.date], ['Kl.', e.time !== 'TBA' ? e.time : '—'], ['Sted', e.venue], ...(e.address ? [['Adresse', e.address]] : [])].map(([k,v]) => (
                       <div key={k}>
                         <div className="tag" style={{ marginBottom:'4px' }}>{k}</div>
                         <div className="italic-meta" style={{ color:'var(--fg)' }}>{v}</div>
@@ -493,10 +508,10 @@ const Koncertkalender = () => {
                           className="btn btn-sm" style={{ display:'block', width:'100%', textAlign:'left', color:'var(--fg-muted)', borderBottom:'1px solid var(--border)', padding:'11px' }}>
                           Google Kalender
                         </button>
-                        <a href={`webcal://${window.location.host}/calendar/${e.id}.ics`} onClick={() => setCalMenu(null)}
+                        <button onClick={() => { downloadICS(e); setCalMenu(null); }}
                           className="btn btn-sm" style={{ display:'block', width:'100%', textAlign:'left', color:'var(--fg-muted)', padding:'11px' }}>
                           Apple / Outlook
-                        </a>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1066,6 +1081,7 @@ const Footer = () => {
 const App = () => {
   const [isDark, setIsDark] = React.useState(() => localStorage.getItem('krs-theme') !== 'light');
   const [scrolled, setScrolled] = React.useState(false);
+  const [events, setEvents] = React.useState([]);
   const isMobile = useIsMobile();
   const theme = isDark ? themes.dark : themes.light;
 
@@ -1073,6 +1089,13 @@ const App = () => {
     localStorage.setItem('krs-theme', d ? 'light' : 'dark');
     return !d;
   });
+
+  React.useEffect(() => {
+    fetch('concerts.json')
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(data => setEvents(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
@@ -1083,6 +1106,7 @@ const App = () => {
   return (
     <ThemeCtx.Provider value={theme}>
     <LayoutCtx.Provider value={isMobile}>
+    <EventsCtx.Provider value={events}>
       <div className="app" style={themeVars(theme)}>
         <Header scrolled={scrolled} toggleTheme={toggleTheme} isDark={isDark} />
         <Hero />
@@ -1094,6 +1118,7 @@ const App = () => {
         <Kontakt />
         <Footer />
       </div>
+    </EventsCtx.Provider>
     </LayoutCtx.Provider>
     </ThemeCtx.Provider>
   );

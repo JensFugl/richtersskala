@@ -1,0 +1,7 @@
+[
+  { "id": 1, "date": "16. maj 2026",       "day": "16", "month": "maj 2026", "time": "19:30", "title": "Sommerkoncert",      "venue": "Emmaus",              "address": "Peter Bangs Vej 3C, 2000 Frederiksberg", "price": "75",  "description": "", "soldOut": false },
+  { "id": 2, "date": "13. september 2026", "day": "13", "month": "sep 2026", "time": "TBA",   "title": "Brønshøj vandtårn",  "venue": "Brønshøj vandtårn",   "address": "Brønshøjvej 29, 2700 København",        "price": "TBA", "description": "", "soldOut": false },
+  { "id": 3, "date": "18. september 2026", "day": "18", "month": "sep 2026", "time": "TBA",   "title": "Bornholm turne",     "venue": "Østerlars Rundkirke", "address": "Vietsvej 25, 3760 Gudhjem",             "price": "TBA", "description": "", "soldOut": false },
+  { "id": 4, "date": "19. september 2026", "day": "19", "month": "sep 2026", "time": "TBA",   "title": "Bornholm turne",     "venue": "Svaneke Kirke",        "address": "Kirkepladsen 2, 3740 Svaneke",          "price": "TBA", "description": "", "soldOut": false },
+  { "id": 5, "date": "13. december 2026",  "day": "13", "month": "dec 2026", "time": "TBA",   "title": "Julekoncert",        "venue": "Rundetårn",            "address": "Købmagergade 52A, 1150 København",      "price": "TBA", "description": "", "soldOut": false }
+]

@@ -1,0 +1,33 @@
+name: Sync concerts from Google Sheets
+
+on:
+  schedule:
+    - cron: '0 6 * * 3'   # Every Wednesday at 06:00 UTC
+  workflow_dispatch:        # Manual trigger from GitHub Actions UI
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-concerts.yml'
+      - '.github/scripts/sync_concerts.py'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch sheet and update concerts.json
+        run: python3 .github/scripts/sync_concerts.py
+
+      - name: Commit if concerts.json changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add concerts.json
+          git diff --staged --quiet || (
+            git commit -m "chore: sync concerts from Google Sheets" &&
+            git push
+          )
