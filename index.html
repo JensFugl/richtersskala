@@ -46,9 +46,9 @@
   .concert-row:hover { opacity: 0.65; }
 
   .gallery-cell { position: relative; overflow: hidden; cursor: pointer; }
-  .gallery-cell img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.78); transition: transform 500ms ease-out, filter 500ms ease-out; }
-  .gallery-cell:hover img { transform: scale(1.04); filter: brightness(0.9); }
-  .gallery-cell .caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 20px; background: linear-gradient(to top, rgba(13,13,11,0.7), transparent); font-family: 'EB Garamond', Georgia, serif; font-size: 13px; font-style: italic; color: rgba(247,245,240,0.75); }
+  .gallery-cell img { width: 100%; height: 100%; object-fit: cover; filter: brightness(var(--img-brightness, 0.78)); transition: transform 500ms ease-out, filter 500ms ease-out; }
+  .gallery-cell:hover img { transform: scale(1.04); filter: brightness(var(--img-brightness-hover, 0.9)); }
+  .gallery-cell .caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 20px; background: var(--caption-grad, linear-gradient(to top, rgba(13,13,11,0.7), transparent)); font-family: 'EB Garamond', Georgia, serif; font-size: 13px; font-style: italic; color: rgba(247,245,240,0.75); }
 
   .video-card { position: relative; cursor: pointer; overflow: hidden; aspect-ratio: 16/9; background: #0d0d0b; }
   .video-card .play-circle { width: 56px; height: 56px; border: 1.5px solid rgba(247,245,240,0.5); display: flex; align-items: center; justify-content: center; transition: border-color 200ms, background 200ms; }
@@ -200,29 +200,80 @@ function downloadICS(ev) {
 }
 
 /* ─── THEME ────────────────────────────────────────────── */
+const PALETTE_ORDER = ['lys', 'creme', 'papir', 'moerk'];
+
 const themes = {
-  dark: {
+  lys: {
+    label: 'Lys',
+    bg:'#f5f3ee', fg:'#1a1917', fgMuted:'#736b60', fgBody:'rgba(26,25,23,0.78)',
+    border:'#ddd9d1', borderLight:'#ccc8c0',
+    accent:'#b07f2e', headerBg:'rgba(245,243,238,0.92)', headerBorder:'#ddd9d1',
+    cardBg:'#edeae3', sectionBg:'#f5f3ee', altSectionBg:'#edeae3', dark:false,
+    imgBrightness:'0.97', imgBrightnessHover:'1', aboutImgBrightness:'0.92',
+    heroBrightness:'0.58',
+    heroOverlay:'linear-gradient(to top, rgba(13,13,11,0.82) 0%, rgba(13,13,11,0.15) 50%, transparent 100%)',
+    captionGrad:'linear-gradient(to top, rgba(13,13,11,0.55), transparent)',
+    aboutOverlay:'linear-gradient(to right, transparent, rgba(13,13,11,0.25))',
+  },
+  creme: {
+    label: 'Creme',
+    bg:'#f2e9d8', fg:'#2b2418', fgMuted:'#77664a', fgBody:'rgba(43,36,24,0.78)',
+    border:'#ddd0b6', borderLight:'#cfc0a2',
+    accent:'#a8762a', headerBg:'rgba(242,233,216,0.92)', headerBorder:'#ddd0b6',
+    cardBg:'#eaddc4', sectionBg:'#f2e9d8', altSectionBg:'#eaddc4', dark:false,
+    imgBrightness:'0.97', imgBrightnessHover:'1', aboutImgBrightness:'0.92',
+    heroBrightness:'0.58',
+    heroOverlay:'linear-gradient(to top, rgba(24,19,10,0.82) 0%, rgba(24,19,10,0.15) 50%, transparent 100%)',
+    captionGrad:'linear-gradient(to top, rgba(24,19,10,0.55), transparent)',
+    aboutOverlay:'linear-gradient(to right, transparent, rgba(24,19,10,0.25))',
+  },
+  papir: {
+    label: 'Papir',
+    bg:'#f1f2f2', fg:'#22231f', fgMuted:'#686c66', fgBody:'rgba(34,35,31,0.78)',
+    border:'#d8dad6', borderLight:'#c7cac5',
+    accent:'#a5803d', headerBg:'rgba(241,242,242,0.92)', headerBorder:'#d8dad6',
+    cardBg:'#e6e8e5', sectionBg:'#f1f2f2', altSectionBg:'#e6e8e5', dark:false,
+    imgBrightness:'0.97', imgBrightnessHover:'1', aboutImgBrightness:'0.92',
+    heroBrightness:'0.58',
+    heroOverlay:'linear-gradient(to top, rgba(15,16,15,0.82) 0%, rgba(15,16,15,0.15) 50%, transparent 100%)',
+    captionGrad:'linear-gradient(to top, rgba(15,16,15,0.55), transparent)',
+    aboutOverlay:'linear-gradient(to right, transparent, rgba(15,16,15,0.25))',
+  },
+  moerk: {
+    label: 'Mørk',
     bg:'#0d0d0b', fg:'#f7f5f0', fgMuted:'#8a8278', fgBody:'rgba(247,245,240,0.75)',
     border:'#2a2825', borderLight:'#3a3835',
     accent:'#c8933a', headerBg:'rgba(13,13,11,0.92)', headerBorder:'#2a2825',
     cardBg:'#1a1917', sectionBg:'#0d0d0b', altSectionBg:'#1a1917', dark:true,
-  },
-  light: {
-    bg:'#f5f3ee', fg:'#1a1917', fgMuted:'#7a7268', fgBody:'rgba(26,25,23,0.75)',
-    border:'#ddd9d1', borderLight:'#ccc8c0',
-    accent:'#c8933a', headerBg:'rgba(245,243,238,0.92)', headerBorder:'#ddd9d1',
-    cardBg:'#edeae3', sectionBg:'#f5f3ee', altSectionBg:'#edeae3', dark:false,
+    imgBrightness:'0.78', imgBrightnessHover:'0.9', aboutImgBrightness:'0.68',
+    heroBrightness:'0.48',
+    heroOverlay:'linear-gradient(to top, rgba(13,13,11,0.9) 0%, rgba(13,13,11,0.2) 50%, transparent 100%)',
+    captionGrad:'linear-gradient(to top, rgba(13,13,11,0.7), transparent)',
+    aboutOverlay:'linear-gradient(to right, transparent, rgba(13,13,11,0.5))',
   },
 };
+
+const LEGACY_THEME_KEYS = { dark:'moerk', light:'lys' };
+const initialPalette = () => {
+  const stored = localStorage.getItem('krs-theme');
+  const key = LEGACY_THEME_KEYS[stored] || stored;
+  return themes[key] ? key : 'lys';
+};
+const nextPaletteKey = (key) =>
+  PALETTE_ORDER[(PALETTE_ORDER.indexOf(key) + 1) % PALETTE_ORDER.length];
 
 const themeVars = (t) => ({
   '--bg': t.bg, '--fg': t.fg, '--fg-muted': t.fgMuted, '--fg-body': t.fgBody,
   '--border': t.border, '--border-light': t.borderLight, '--accent': t.accent,
   '--card-bg': t.cardBg, '--section-bg': t.sectionBg, '--alt-section-bg': t.altSectionBg,
   '--header-bg': t.headerBg, '--header-border': t.headerBorder,
+  '--img-brightness': t.imgBrightness, '--img-brightness-hover': t.imgBrightnessHover,
+  '--about-img-brightness': t.aboutImgBrightness,
+  '--hero-brightness': t.heroBrightness, '--hero-overlay': t.heroOverlay,
+  '--caption-grad': t.captionGrad, '--about-overlay': t.aboutOverlay,
 });
 
-const ThemeCtx = React.createContext(themes.dark);
+const ThemeCtx = React.createContext(themes.lys);
 const LayoutCtx = React.createContext(false);
 const EventsCtx = React.createContext([]);
 
@@ -253,28 +304,25 @@ const Logo = ({ height=40, marginBottom=0 }) => {
   );
 };
 
-const ThemeToggleIcon = ({ dark }) => dark ? (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-    <circle cx="8" cy="8" r="3"/>
-    <line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/>
-    <line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/>
-    <line x1="3.05" y1="3.05" x2="4.46" y2="4.46"/><line x1="11.54" y1="11.54" x2="12.95" y2="12.95"/>
-    <line x1="3.05" y1="12.95" x2="4.46" y2="11.54"/><line x1="11.54" y1="4.46" x2="12.95" y2="3.05"/>
-  </svg>
-) : (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M13.5 10A6 6 0 0 1 6 2.5a5.5 5.5 0 1 0 7.5 7.5z"/>
+const PaletteSwatch = ({ t }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16">
+    <circle cx="8" cy="8" r="6.5" fill={t.bg} stroke="currentColor" strokeWidth="1.2" opacity="0.9"/>
+    <circle cx="8" cy="8" r="2.2" fill={t.accent}/>
   </svg>
 );
 
-const ThemeToggle = ({ toggleTheme, isDark }) => (
-  <button onClick={toggleTheme} title="Skift farvetema"
-    style={{ padding:'4px', opacity:0.7, display:'flex', alignItems:'center' }}>
-    <ThemeToggleIcon dark={isDark} />
-  </button>
-);
+const PaletteCycle = ({ paletteKey, cyclePalette }) => {
+  const next = themes[nextPaletteKey(paletteKey)];
+  return (
+    <button onClick={cyclePalette} title={`Skift farvetema (næste: ${next.label})`}
+      aria-label={`Skift farvetema, næste: ${next.label}`}
+      style={{ padding:'4px', opacity:0.7, display:'flex', alignItems:'center' }}>
+      <PaletteSwatch t={next} />
+    </button>
+  );
+};
 
-const Header = ({ scrolled, toggleTheme, isDark }) => {
+const Header = ({ scrolled, paletteKey, cyclePalette }) => {
   const isMobile = React.useContext(LayoutCtx);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const showBg = scrolled || menuOpen;
@@ -307,7 +355,7 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
                 {NAV.map(l => <li key={l.href}><a href={l.href} className="nav-link">{l.label}</a></li>)}
               </ul>
             </nav>
-            <ThemeToggle toggleTheme={toggleTheme} isDark={isDark} />
+            <PaletteCycle paletteKey={paletteKey} cyclePalette={cyclePalette} />
           </div>
         )}
       </header>
@@ -331,16 +379,16 @@ const Header = ({ scrolled, toggleTheme, isDark }) => {
                 </li>
               ))}
               <li style={{ borderBottom:'1px solid var(--border)' }}>
-                <button onClick={toggleTheme}
+                <button onClick={cyclePalette}
                   style={{
                     display:'flex', alignItems:'center', justifyContent:'space-between',
                     width:'100%', padding:'20px 0', textAlign:'left',
                   }}>
                   <span className="display" style={{ fontSize:'28px' }}>
-                    {isDark ? 'Lyst tema' : 'Mørkt tema'}
+                    Tema: {themes[paletteKey].label}
                   </span>
                   <span style={{ display:'flex', alignItems:'center', opacity:0.7 }}>
-                    <ThemeToggleIcon dark={isDark} />
+                    <PaletteSwatch t={themes[nextPaletteKey(paletteKey)]} />
                   </span>
                 </button>
               </li>
@@ -395,8 +443,8 @@ const Hero = () => {
   return (
     <section id="top" style={{ position:'relative', width:'100%', height:'100vh', overflow:'hidden', display:'flex', alignItems:'flex-end' }}>
       <img src="assets/photo-choir-museum.jpg" alt=""
-        style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(0.48)', transform:`translate3d(0, ${parallaxY}px, 0)`, willChange:'transform' }} />
-      <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(13,13,11,0.9) 0%, rgba(13,13,11,0.2) 50%, transparent 100%)' }}></div>
+        style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(var(--hero-brightness))', transform:`translate3d(0, ${parallaxY}px, 0)`, willChange:'transform' }} />
+      <div style={{ position:'absolute', inset:0, background:'var(--hero-overlay)' }}></div>
 
       <div style={{ position:'relative', zIndex:2, padding:'0 clamp(20px,4vw,64px) clamp(48px,7vh,96px)', maxWidth:'900px' }}>
         <div className="eyebrow">{next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}</div>
@@ -800,8 +848,8 @@ const OmKoret = () => {
       <div style={{ display:'grid', gridTemplateColumns: cols, minHeight: isMobile ? 'unset' : '540px' }}>
         <div style={{ overflow:'hidden', position:'relative', height: imgHeight }}>
           <img src="assets/photo-choir-full.jpg" alt="Kammerkoret Richters Skala" loading="lazy" decoding="async"
-            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', filter:'brightness(0.68)' }} />
-          {!isMobile && <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, transparent, rgba(13,13,11,0.5))' }}></div>}
+            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', filter:'brightness(var(--about-img-brightness))' }} />
+          {!isMobile && <div style={{ position:'absolute', inset:0, background:'var(--about-overlay)' }}></div>}
         </div>
         <div style={{ padding: pad, display:'flex', flexDirection:'column', justifyContent:'center' }}>
           <div className="eyebrow">Om koret</div>
@@ -838,7 +886,7 @@ const OmKoret = () => {
         </div>
         <div style={{ overflow:'hidden', height: imgHeight }}>
           <img src="assets/photo-conductor.jpg" alt="Laus Richter Larsen" loading="lazy" decoding="async"
-            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 15%', filter:'brightness(0.75)' }} />
+            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 15%', filter:'brightness(var(--about-img-brightness))' }} />
         </div>
       </div>
     </section>
@@ -1079,15 +1127,16 @@ const Footer = () => {
 
 /* ─── APP ──────────────────────────────────────────────── */
 const App = () => {
-  const [isDark, setIsDark] = React.useState(() => localStorage.getItem('krs-theme') !== 'light');
+  const [palette, setPalette] = React.useState(initialPalette);
   const [scrolled, setScrolled] = React.useState(false);
   const [events, setEvents] = React.useState([]);
   const isMobile = useIsMobile();
-  const theme = isDark ? themes.dark : themes.light;
+  const theme = themes[palette];
 
-  const toggleTheme = () => setIsDark(d => {
-    localStorage.setItem('krs-theme', d ? 'light' : 'dark');
-    return !d;
+  const cyclePalette = () => setPalette(p => {
+    const next = nextPaletteKey(p);
+    localStorage.setItem('krs-theme', next);
+    return next;
   });
 
   React.useEffect(() => {
@@ -1108,7 +1157,7 @@ const App = () => {
     <LayoutCtx.Provider value={isMobile}>
     <EventsCtx.Provider value={events}>
       <div className="app" style={themeVars(theme)}>
-        <Header scrolled={scrolled} toggleTheme={toggleTheme} isDark={isDark} />
+        <Header scrolled={scrolled} paletteKey={palette} cyclePalette={cyclePalette} />
         <Hero />
         <Koncertkalender />
         <Galleri />
