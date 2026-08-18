@@ -536,7 +536,12 @@ const ConcertRow = ({ e, i, isPast, expanded, setExpanded, calMenu, setCalMenu }
           {!isPast && (
             <div style={{ minWidth:'160px' }}>
               {!e.soldOut ? (
-                <button className="btn btn-sm btn-light" style={{ width:'100%', padding:'12px', marginBottom:'8px' }}>Køb billetter</button>
+                e.ticketLink ? (
+                  <a href={e.ticketLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light"
+                    style={{ display:'block', width:'100%', padding:'12px', marginBottom:'8px', textAlign:'center' }}>Køb billetter</a>
+                ) : (
+                  <button className="btn btn-sm btn-light" style={{ width:'100%', padding:'12px', marginBottom:'8px' }}>Køb billetter</button>
+                )
               ) : (
                 <div className="kicker" style={{ padding:'12px', textAlign:'center', border:'1px solid var(--border)', marginBottom:'8px' }}>Udsolgt</div>
               )}
@@ -558,6 +563,12 @@ const ConcertRow = ({ e, i, isPast, expanded, setExpanded, calMenu, setCalMenu }
                   </div>
                 )}
               </div>
+              {e.eventLink && (
+                <a href={e.eventLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm"
+                  style={{ display:'block', textAlign:'center', color:'var(--fg-muted)', border:'1px solid var(--border)', padding:'11px', marginTop:'8px' }}>
+                  Facebook-begivenhed
+                </a>
+              )}
             </div>
           )}
         </div>
