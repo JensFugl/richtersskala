@@ -519,7 +519,7 @@ const ConcertRow = ({ e, i, isPast, expanded, setExpanded, calMenu, setCalMenu }
       </div>
 
       {expanded === e.id && (
-        <div style={{ background:'var(--card-bg)', border:'1px solid var(--border)', padding: isMobile ? '20px' : '28px 32px', marginBottom:'2px', display:'grid', gridTemplateColumns: (isMobile || isPast) ? '1fr' : '1fr auto', gap: isMobile ? '20px' : '32px', alignItems:'start' }}>
+        <div style={{ background:'var(--card-bg)', border:'1px solid var(--border)', padding: isMobile ? '20px' : '28px 32px', marginBottom:'2px', display:'grid', gridTemplateColumns: (isMobile || isPast) ? '1fr' : '1fr auto', gap: isMobile ? '20px' : '32px', alignItems:'start', overflowWrap:'anywhere' }}>
           <div>
             {e.description && e.description !== 'TBA' && (
               <div className="body" style={{ marginBottom:'16px' }}>{e.description}</div>
