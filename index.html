@@ -265,7 +265,7 @@ const LEGACY_THEME_KEYS = { dark:'moerk', light:'lys' };
 const initialPalette = () => {
   const stored = localStorage.getItem('krs-theme');
   const key = LEGACY_THEME_KEYS[stored] || stored;
-  return themes[key] ? key : 'lys';
+  return themes[key] ? key : 'creme';
 };
 const nextPaletteKey = (key) =>
   PALETTE_ORDER[(PALETTE_ORDER.indexOf(key) + 1) % PALETTE_ORDER.length];
@@ -281,7 +281,7 @@ const themeVars = (t) => ({
   '--caption-grad': t.captionGrad, '--about-overlay': t.aboutOverlay,
 });
 
-const ThemeCtx = React.createContext(themes.lys);
+const ThemeCtx = React.createContext(themes.creme);
 const LayoutCtx = React.createContext(false);
 const EventsCtx = React.createContext([]);
 
