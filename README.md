@@ -10,7 +10,7 @@
 ## Eget domæne (richtersskala.dk hos one.com)
 
 Filen `CNAME` i roden fortæller GitHub Pages, hvilket domæne siden serveres
-på (richtersskala.dk — GitHub omdirigerer selv www.richtersskala.dk dertil).
+på (www.richtersskala.dk — GitHub omdirigerer selv richtersskala.dk dertil).
 Derudover skal DNS hos one.com pege på GitHub:
 
 1. Log ind på one.com → Domæner → richtersskala.dk → **DNS-indstillinger**
