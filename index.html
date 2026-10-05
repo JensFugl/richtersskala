@@ -41,15 +41,18 @@
 </script>
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" as="image" href="assets/photo-choir-museum.jpg" imagesrcset="assets/photo-choir-museum-1200.jpg 1200w, assets/photo-choir-museum.jpg 2400w" imagesizes="100vw" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=EB+Garamond:ital@0;1&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<script defer src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script defer src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
+<script defer src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js" integrity="sha384-toVdrLSMaw7Y55MowcKqkmFL/Ek6Sky62NOk0b5sDDZBu2wcoPyyQUt9unDVjXhL" crossorigin="anonymous"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
-  body { -webkit-font-smoothing: antialiased; font-family: 'EB Garamond', Georgia, serif; }
+  body { -webkit-font-smoothing: antialiased; font-family: 'EB Garamond', Georgia, serif; background: #f2e9d8; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .krs-shake, .krs-bar-active { animation: none; } }
   img { display: block; max-width: 100%; }
   button { cursor: pointer; background: none; border: none; color: inherit; font: inherit; padding: 0; }
   a { text-decoration: none; color: inherit; transition: opacity 150ms ease-out; }
@@ -132,7 +135,9 @@
     <p>Skriv til os på <a href="mailto:richtersskala@gmail.com">richtersskala@gmail.com</a>. Følg koret på <a href="https://www.instagram.com/richters_skala/">Instagram</a> og <a href="https://www.facebook.com/profile.php?id=61556245828049">Facebook</a>.</p>
   </div>
 </div>
-<script type="text/babel">
+<script type="module">
+// Markup is written with htm (JSX-like tagged templates), so the page runs without a compile step
+const html = htm.bind(React.createElement);
 
 /* ─── DATA ─────────────────────────────────────────────── */
 
@@ -145,6 +150,9 @@ const PHOTOS = [
   { src:'assets/photo-choir-singing.jpg', caption:'2023', alt:'Koret synger i hvid kirke med lysekrone' },
   { src:'assets/photo-candles.jpg',       caption:'Julekoncert, 2024', alt:'Korsangere synger ved levende lys til julekoncert' },
 ];
+
+// Each photo also exists as a 1200px-wide "-1200.jpg" copy for small screens and thumbnails
+const srcSet = src => `${src.replace(/\.jpg$/, '-1200.jpg')} 1200w, ${src} 2400w`;
 
 const SPONSORS = [
   { name:'Brebølfonden',             tier:'Sæsonpartner' },
@@ -183,47 +191,41 @@ function parseDanishDate(dateStr) {
   return { day: parseInt(dayPart,10), month: DANISH_MONTHS[monthPart.toLowerCase()], year: parseInt(yearPart,10) };
 }
 
+// `day` may be a range like "12–14"; the last day decides when the event is over
+function lastDayOf(ev, fallback) {
+  const m = String(ev.day).match(/[–—-]\s*(\d+)/);
+  return m ? parseInt(m[1],10) : fallback;
+}
+
 function eventStartDate(ev) {
   const { day, month, year } = parseDanishDate(ev.date);
   const [h, m] = (ev.time || '').split(':').map(n => parseInt(n,10));
   return new Date(year, month - 1, day, isFinite(h) ? h : 19, isFinite(m) ? m : 30);
 }
 
+// Exclusive end: midnight after the last day
 function eventEndDate(ev) {
   const { day, month, year } = parseDanishDate(ev.date);
-  const dayField = String(ev.day);
-  const dashIdx = dayField.search(/[–—-]/);
-  const lastDay = dashIdx !== -1 ? parseInt(dayField.slice(dashIdx+1),10) : day;
-  return new Date(year, month - 1, lastDay + 1);
+  return new Date(year, month - 1, lastDayOf(ev, day) + 1);
 }
+
+const isUpcoming = (ev, now = Date.now()) => eventEndDate(ev).getTime() > now;
 
 function formatCountdown(target, now) {
   const ms = target - now;
   if (ms <= 0) return null;
   const totalSec = Math.floor(ms / 1000);
-  const days  = Math.floor(totalSec / 86400);
-  const hours = Math.floor((totalSec % 86400) / 3600);
-  const mins  = Math.floor((totalSec % 3600) / 60);
-  const secs  = totalSec % 60;
+  const days = Math.floor(totalSec / 86400);
   const pad = n => String(n).padStart(2, '0');
-  const dayLabel = days === 1 ? 'dag' : 'dage';
-  return `${days} ${dayLabel} : ${pad(hours)} : ${pad(mins)} : ${pad(secs)}`;
+  return `${days} ${days === 1 ? 'dag' : 'dage'} : ${pad(Math.floor(totalSec % 86400 / 3600))} : ${pad(Math.floor(totalSec % 3600 / 60))} : ${pad(totalSec % 60)}`;
 }
 
-function toICSDate(year, month, day) {
-  return `${year}${String(month).padStart(2,'0')}${String(day).padStart(2,'0')}`;
-}
+const ymd = (d, sep = '') =>
+  [d.getFullYear(), String(d.getMonth() + 1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join(sep);
 
 function eventDates(ev) {
-  const start = parseDanishDate(ev.date);
-  const dayField = String(ev.day);
-  const dashIdx = dayField.search(/[–—-]/);
-  const lastDay = dashIdx !== -1 ? parseInt(dayField.slice(dashIdx+1),10) : start.day;
-  let endYear = start.year, endMonth = start.month, endDay = lastDay + 1;
-  const daysInMonth = new Date(endYear, endMonth, 0).getDate();
-  if (endDay > daysInMonth) { endDay -= daysInMonth; endMonth += 1; }
-  if (endMonth > 12) { endMonth = 1; endYear += 1; }
-  return { dtStart: toICSDate(start.year, start.month, start.day), dtEnd: toICSDate(endYear, endMonth, endDay) };
+  const { day, month, year } = parseDanishDate(ev.date);
+  return { dtStart: ymd(new Date(year, month - 1, day)), dtEnd: ymd(eventEndDate(ev)) };
 }
 
 function openGoogleCalendar(ev) {
@@ -259,12 +261,9 @@ function downloadICS(ev) {
 /* ─── STRUCTURED DATA (SEO) ─────────────────────────────── */
 const SITE_URL = 'https://richtersskala.dk/';
 
-function toISODate({ year, month, day }) {
-  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-}
-
 function eventJsonLd(ev) {
-  const start = parseDanishDate(ev.date);
+  const { day, month, year } = parseDanishDate(ev.date);
+  const date = ymd(new Date(year, month - 1, day), '-');
   const hasTime = /^\d{1,2}:\d{2}$/.test(ev.time || '');
   const [street, ...rest] = (ev.address || '').split(',').map(x => x.trim());
   const [, postalCode, locality] = (rest.join(', ').match(/^(\d{4})\s+(.+)$/) || []);
@@ -272,7 +271,7 @@ function eventJsonLd(ev) {
   return {
     '@type': 'MusicEvent',
     name: `${ev.title} – Kammerkoret Richters Skala`,
-    startDate: hasTime ? `${toISODate(start)}T${ev.time.padStart(5,'0')}:00` : toISODate(start),
+    startDate: hasTime ? `${date}T${ev.time.padStart(5,'0')}:00` : date,
     eventStatus: 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     ...(ev.description && { description: ev.description }),
@@ -301,8 +300,7 @@ function eventJsonLd(ev) {
 }
 
 function updateEventsJsonLd(events) {
-  const now = new Date();
-  const upcoming = events.filter(ev => { try { return eventEndDate(ev) > now; } catch { return false; } });
+  const upcoming = events.filter(ev => isUpcoming(ev));
   let tag = document.getElementById('events-jsonld');
   if (!tag) {
     tag = Object.assign(document.createElement('script'), { id:'events-jsonld', type:'application/ld+json' });
@@ -314,76 +312,60 @@ function updateEventsJsonLd(events) {
 /* ─── THEME ────────────────────────────────────────────── */
 const PALETTE_ORDER = ['lys', 'creme', 'papir', 'moerk'];
 
+// Light themes share image/overlay settings; `shade` is the dark tint used in overlays
+const lightTheme = (shade, colors) => ({
+  ...colors, dark:false,
+  imgBrightness:'0.97', imgBrightnessHover:'1', aboutImgBrightness:'0.92', heroBrightness:'0.58',
+  heroOverlay:`linear-gradient(to top, rgba(${shade},0.82) 0%, rgba(${shade},0.15) 50%, transparent 100%)`,
+  captionGrad:`linear-gradient(to top, rgba(${shade},0.55), transparent)`,
+  aboutOverlay:`linear-gradient(to right, transparent, rgba(${shade},0.25))`,
+});
+
 const themes = {
-  lys: {
-    label: 'Lys',
-    bg:'#f5f3ee', fg:'#1a1917', fgMuted:'#736b60', fgBody:'rgba(26,25,23,0.78)',
-    border:'#ddd9d1', borderLight:'#ccc8c0',
-    accent:'#b07f2e', headerBg:'rgba(245,243,238,0.92)', headerBorder:'#ddd9d1',
-    cardBg:'#edeae3', sectionBg:'#f5f3ee', altSectionBg:'#edeae3', dark:false,
-    imgBrightness:'0.97', imgBrightnessHover:'1', aboutImgBrightness:'0.92',
-    heroBrightness:'0.58',
-    heroOverlay:'linear-gradient(to top, rgba(13,13,11,0.82) 0%, rgba(13,13,11,0.15) 50%, transparent 100%)',
-    captionGrad:'linear-gradient(to top, rgba(13,13,11,0.55), transparent)',
-    aboutOverlay:'linear-gradient(to right, transparent, rgba(13,13,11,0.25))',
-  },
-  creme: {
-    label: 'Creme',
-    bg:'#f2e9d8', fg:'#2b2418', fgMuted:'#77664a', fgBody:'rgba(43,36,24,0.78)',
-    border:'#ddd0b6', borderLight:'#cfc0a2',
-    accent:'#a8762a', headerBg:'rgba(242,233,216,0.92)', headerBorder:'#ddd0b6',
-    cardBg:'#eaddc4', sectionBg:'#f2e9d8', altSectionBg:'#eaddc4', dark:false,
-    imgBrightness:'0.97', imgBrightnessHover:'1', aboutImgBrightness:'0.92',
-    heroBrightness:'0.58',
-    heroOverlay:'linear-gradient(to top, rgba(24,19,10,0.82) 0%, rgba(24,19,10,0.15) 50%, transparent 100%)',
-    captionGrad:'linear-gradient(to top, rgba(24,19,10,0.55), transparent)',
-    aboutOverlay:'linear-gradient(to right, transparent, rgba(24,19,10,0.25))',
-  },
-  papir: {
-    label: 'Papir',
-    bg:'#f1f2f2', fg:'#22231f', fgMuted:'#686c66', fgBody:'rgba(34,35,31,0.78)',
-    border:'#d8dad6', borderLight:'#c7cac5',
-    accent:'#a5803d', headerBg:'rgba(241,242,242,0.92)', headerBorder:'#d8dad6',
-    cardBg:'#e6e8e5', sectionBg:'#f1f2f2', altSectionBg:'#e6e8e5', dark:false,
-    imgBrightness:'0.97', imgBrightnessHover:'1', aboutImgBrightness:'0.92',
-    heroBrightness:'0.58',
-    heroOverlay:'linear-gradient(to top, rgba(15,16,15,0.82) 0%, rgba(15,16,15,0.15) 50%, transparent 100%)',
-    captionGrad:'linear-gradient(to top, rgba(15,16,15,0.55), transparent)',
-    aboutOverlay:'linear-gradient(to right, transparent, rgba(15,16,15,0.25))',
-  },
+  lys: lightTheme('13,13,11', {
+    label:'Lys', bg:'#f5f3ee', fg:'#1a1917', fgMuted:'#736b60', fgBody:'rgba(26,25,23,0.78)',
+    border:'#ddd9d1', borderLight:'#ccc8c0', accent:'#b07f2e', headerBg:'rgba(245,243,238,0.92)',
+    headerBorder:'#ddd9d1', cardBg:'#edeae3', sectionBg:'#f5f3ee', altSectionBg:'#edeae3',
+  }),
+  creme: lightTheme('24,19,10', {
+    label:'Creme', bg:'#f2e9d8', fg:'#2b2418', fgMuted:'#77664a', fgBody:'rgba(43,36,24,0.78)',
+    border:'#ddd0b6', borderLight:'#cfc0a2', accent:'#a8762a', headerBg:'rgba(242,233,216,0.92)',
+    headerBorder:'#ddd0b6', cardBg:'#eaddc4', sectionBg:'#f2e9d8', altSectionBg:'#eaddc4',
+  }),
+  papir: lightTheme('15,16,15', {
+    label:'Papir', bg:'#f1f2f2', fg:'#22231f', fgMuted:'#686c66', fgBody:'rgba(34,35,31,0.78)',
+    border:'#d8dad6', borderLight:'#c7cac5', accent:'#a5803d', headerBg:'rgba(241,242,242,0.92)',
+    headerBorder:'#d8dad6', cardBg:'#e6e8e5', sectionBg:'#f1f2f2', altSectionBg:'#e6e8e5',
+  }),
   moerk: {
-    label: 'Mørk',
-    bg:'#0d0d0b', fg:'#f7f5f0', fgMuted:'#8a8278', fgBody:'rgba(247,245,240,0.75)',
-    border:'#2a2825', borderLight:'#3a3835',
-    accent:'#c8933a', headerBg:'rgba(13,13,11,0.92)', headerBorder:'#2a2825',
-    cardBg:'#1a1917', sectionBg:'#0d0d0b', altSectionBg:'#1a1917', dark:true,
-    imgBrightness:'0.78', imgBrightnessHover:'0.9', aboutImgBrightness:'0.68',
-    heroBrightness:'0.48',
+    label:'Mørk', bg:'#0d0d0b', fg:'#f7f5f0', fgMuted:'#8a8278', fgBody:'rgba(247,245,240,0.75)',
+    border:'#2a2825', borderLight:'#3a3835', accent:'#c8933a', headerBg:'rgba(13,13,11,0.92)',
+    headerBorder:'#2a2825', cardBg:'#1a1917', sectionBg:'#0d0d0b', altSectionBg:'#1a1917', dark:true,
+    imgBrightness:'0.78', imgBrightnessHover:'0.9', aboutImgBrightness:'0.68', heroBrightness:'0.48',
     heroOverlay:'linear-gradient(to top, rgba(13,13,11,0.9) 0%, rgba(13,13,11,0.2) 50%, transparent 100%)',
     captionGrad:'linear-gradient(to top, rgba(13,13,11,0.7), transparent)',
     aboutOverlay:'linear-gradient(to right, transparent, rgba(13,13,11,0.5))',
   },
 };
 
+const storage = {
+  get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+};
+
 const LEGACY_THEME_KEYS = { dark:'moerk', light:'lys' };
 const initialPalette = () => {
-  const stored = localStorage.getItem('krs-theme');
+  const stored = storage.get('krs-theme');
   const key = LEGACY_THEME_KEYS[stored] || stored;
   return themes[key] ? key : 'creme';
 };
 const nextPaletteKey = (key) =>
   PALETTE_ORDER[(PALETTE_ORDER.indexOf(key) + 1) % PALETTE_ORDER.length];
 
-const themeVars = (t) => ({
-  '--bg': t.bg, '--fg': t.fg, '--fg-muted': t.fgMuted, '--fg-body': t.fgBody,
-  '--border': t.border, '--border-light': t.borderLight, '--accent': t.accent,
-  '--card-bg': t.cardBg, '--section-bg': t.sectionBg, '--alt-section-bg': t.altSectionBg,
-  '--header-bg': t.headerBg, '--header-border': t.headerBorder,
-  '--img-brightness': t.imgBrightness, '--img-brightness-hover': t.imgBrightnessHover,
-  '--about-img-brightness': t.aboutImgBrightness,
-  '--hero-brightness': t.heroBrightness, '--hero-overlay': t.heroOverlay,
-  '--caption-grad': t.captionGrad, '--about-overlay': t.aboutOverlay,
-});
+// fgMuted → --fg-muted, etc.
+const themeVars = (t) => Object.fromEntries(
+  Object.entries(t).filter(([k]) => k !== 'label' && k !== 'dark')
+    .map(([k, v]) => ['--' + k.replace(/[A-Z]/g, c => '-' + c.toLowerCase()), v]));
 
 const ThemeCtx = React.createContext(themes.creme);
 const LayoutCtx = React.createContext(false);
@@ -401,36 +383,63 @@ const useIsMobile = () => {
 };
 
 /* ─── SHARED ───────────────────────────────────────────── */
+const fetchList = url => fetch(url)
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(data => Array.isArray(data) ? data : []);
+
+// Loads a JSON array; status is 'loading' | 'ready' | 'empty' | 'error'
+const useJsonList = (url) => {
+  const [state, setState] = React.useState({ items: [], status: 'loading' });
+  React.useEffect(() => {
+    fetchList(url)
+      .then(items => setState({ items, status: items.length ? 'ready' : 'empty' }))
+      .catch(() => setState({ items: [], status: 'error' }));
+  }, [url]);
+  return state;
+};
+
+// Keyboard handling for lightboxes, active only while `active` is true
+const useKeys = (active, handlers) => {
+  const ref = React.useRef(handlers);
+  ref.current = handlers;
+  React.useEffect(() => {
+    if (!active) return;
+    const onKey = e => ref.current[e.key]?.();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [active]);
+};
+
 const StatusMessage = ({ children }) => (
-  <div style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', fontStyle:'italic', color:'var(--fg-muted)', padding:'18px 0' }}>
-    {children}
-  </div>
+  html`<div style=${{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', fontStyle:'italic', color:'var(--fg-muted)', padding:'18px 0' }}>
+    ${children}
+  </div>`
 );
 
 /* ─── HEADER ───────────────────────────────────────────── */
 const Logo = ({ height=40, marginBottom=0 }) => {
   const t = React.useContext(ThemeCtx);
   return (
-    <img src="assets/KRS-logo.jpg" alt="Kammerkoret Richters Skala"
-      style={{ height:`${height}px`, width:'auto', marginBottom, filter: t.dark ? 'invert(1) brightness(1.8)' : 'none' }} />
+    html`<img src="assets/KRS-logo.jpg" alt="Kammerkoret Richters Skala"
+      style=${{ height:`${height}px`, width:'auto', marginBottom, filter: t.dark ? 'invert(1) brightness(1.8)' : 'none' }} />`
   );
 };
 
 const PaletteSwatch = ({ t }) => (
-  <svg width="16" height="16" viewBox="0 0 16 16">
-    <circle cx="8" cy="8" r="6.5" fill={t.bg} stroke="currentColor" strokeWidth="1.2" opacity="0.9"/>
-    <circle cx="8" cy="8" r="2.2" fill={t.accent}/>
-  </svg>
+  html`<svg width="16" height="16" viewBox="0 0 16 16">
+    <circle cx="8" cy="8" r="6.5" fill=${t.bg} stroke="currentColor" strokeWidth="1.2" opacity="0.9"/>
+    <circle cx="8" cy="8" r="2.2" fill=${t.accent}/>
+  </svg>`
 );
 
 const PaletteCycle = ({ paletteKey, cyclePalette }) => {
   const next = themes[nextPaletteKey(paletteKey)];
   return (
-    <button onClick={cyclePalette} title={`Skift farvetema (næste: ${next.label})`}
-      aria-label={`Skift farvetema, næste: ${next.label}`}
-      style={{ padding:'4px', opacity:0.7, display:'flex', alignItems:'center' }}>
-      <PaletteSwatch t={next} />
-    </button>
+    html`<button onClick=${cyclePalette} title=${`Skift farvetema (næste: ${next.label})`}
+      aria-label=${`Skift farvetema, næste: ${next.label}`}
+      style=${{ padding:'4px', opacity:0.7, display:'flex', alignItems:'center' }}>
+      <${PaletteSwatch} t=${next} />
+    </button>`
   );
 };
 
@@ -440,8 +449,8 @@ const Header = ({ scrolled, paletteKey, cyclePalette }) => {
   const showBg = scrolled || menuOpen;
 
   return (
-    <>
-      <header style={{
+    html`
+      <header style=${{
         position:'fixed', top:0, left:0, right:0, zIndex:200,
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'14px clamp(20px,4vw,48px)',
@@ -450,30 +459,30 @@ const Header = ({ scrolled, paletteKey, cyclePalette }) => {
         borderBottom: `1px solid ${showBg ? 'var(--header-border)' : 'transparent'}`,
         transition: 'background 350ms ease-out, border-color 350ms ease-out',
       }}>
-        <a href="#top" onClick={() => setMenuOpen(false)}><Logo /></a>
+        <a href="#top" onClick=${() => setMenuOpen(false)}><${Logo} /></a>
 
-        {isMobile ? (
-          <button onClick={() => setMenuOpen(o => !o)} aria-label="Menu" style={{ padding:'8px', display:'flex', flexDirection:'column', gap:'5px' }}>
+        ${isMobile ? (
+          html`<button onClick=${() => setMenuOpen(o => !o)} aria-label="Menu" style=${{ padding:'8px', display:'flex', flexDirection:'column', gap:'5px' }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              {menuOpen
-                ? <><line x1="3" y1="3" x2="17" y2="17"/><line x1="17" y1="3" x2="3" y2="17"/></>
-                : <><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></>}
+              ${menuOpen
+                ? html`<line x1="3" y1="3" x2="17" y2="17"/><line x1="17" y1="3" x2="3" y2="17"/>`
+                : html`<line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/>`}
             </svg>
-          </button>
+          </button>`
         ) : (
-          <div style={{ display:'flex', alignItems:'center', gap:'clamp(16px,2.5vw,32px)' }}>
+          html`<div style=${{ display:'flex', alignItems:'center', gap:'clamp(16px,2.5vw,32px)' }}>
             <nav>
-              <ul style={{ display:'flex', gap:'clamp(16px,2.5vw,32px)', listStyle:'none' }}>
-                {NAV.map(l => <li key={l.href}><a href={l.href} className="nav-link">{l.label}</a></li>)}
+              <ul style=${{ display:'flex', gap:'clamp(16px,2.5vw,32px)', listStyle:'none' }}>
+                ${NAV.map(l => html`<li key=${l.href}><a href=${l.href} className="nav-link">${l.label}</a></li>`)}
               </ul>
             </nav>
-            <PaletteCycle paletteKey={paletteKey} cyclePalette={cyclePalette} />
-          </div>
+            <${PaletteCycle} paletteKey=${paletteKey} cyclePalette=${cyclePalette} />
+          </div>`
         )}
       </header>
 
-      {isMobile && menuOpen && (
-        <div style={{
+      ${isMobile && menuOpen && (
+        html`<div style=${{
           position:'fixed', inset:0, zIndex:190,
           background:'var(--header-bg)', backdropFilter:'blur(12px)',
           display:'flex', flexDirection:'column',
@@ -481,114 +490,105 @@ const Header = ({ scrolled, paletteKey, cyclePalette }) => {
           overflowY:'auto',
         }}>
           <nav>
-            <ul style={{ listStyle:'none' }}>
-              {NAV.map(l => (
-                <li key={l.href} style={{ borderBottom:'1px solid var(--border)' }}>
-                  <a href={l.href} onClick={() => setMenuOpen(false)} className="display"
-                    style={{ display:'block', padding:'20px 0', fontSize:'28px' }}>
-                    {l.label}
+            <ul style=${{ listStyle:'none' }}>
+              ${NAV.map(l => (
+                html`<li key=${l.href} style=${{ borderBottom:'1px solid var(--border)' }}>
+                  <a href=${l.href} onClick=${() => setMenuOpen(false)} className="display"
+                    style=${{ display:'block', padding:'20px 0', fontSize:'28px' }}>
+                    ${l.label}
                   </a>
-                </li>
+                </li>`
               ))}
-              <li style={{ borderBottom:'1px solid var(--border)' }}>
-                <button onClick={cyclePalette}
-                  style={{
+              <li style=${{ borderBottom:'1px solid var(--border)' }}>
+                <button onClick=${cyclePalette}
+                  style=${{
                     display:'flex', alignItems:'center', justifyContent:'space-between',
                     width:'100%', padding:'20px 0', textAlign:'left',
                   }}>
-                  <span className="display" style={{ fontSize:'28px' }}>
-                    Tema: {themes[paletteKey].label}
+                  <span className="display" style=${{ fontSize:'28px' }}>
+                    Tema: ${themes[paletteKey].label}
                   </span>
-                  <span style={{ display:'flex', alignItems:'center', opacity:0.7 }}>
-                    <PaletteSwatch t={themes[nextPaletteKey(paletteKey)]} />
+                  <span style=${{ display:'flex', alignItems:'center', opacity:0.7 }}>
+                    <${PaletteSwatch} t=${themes[nextPaletteKey(paletteKey)]} />
                   </span>
                 </button>
               </li>
             </ul>
           </nav>
-        </div>
+        </div>`
       )}
-    </>
+    `
   );
 };
 
 /* ─── HERO ─────────────────────────────────────────────── */
-const Hero = () => {
-  const events = React.useContext(EventsCtx);
-  const [now, setNow] = React.useState(() => Date.now());
-  const next = React.useMemo(() => {
-    const upcoming = events.filter(e => eventEndDate(e).getTime() > Date.now());
-    return upcoming[0] || null;
-  }, [events]);
-  const [scrollY, setScrollY] = React.useState(0);
-  const [reducedMotion, setReducedMotion] = React.useState(() =>
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-
+// Ticks every second on its own so the rest of the hero doesn't re-render
+const Countdown = ({ target }) => {
+  const [now, setNow] = React.useState(Date.now);
   React.useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+  const text = formatCountdown(target, now);
+  return text && (
+    html`<div style=${{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'clamp(18px,2vw,26px)', fontWeight:300,
+      letterSpacing:'0.08em', color:'#c8933a', fontVariantNumeric:'tabular-nums', margin:'-20px 0 40px' }}>
+      ${text}
+    </div>`
+  );
+};
 
+const Hero = () => {
+  const events = React.useContext(EventsCtx);
+  const next = React.useMemo(() => events.find(e => isUpcoming(e)) || null, [events]);
+  const imgRef = React.useRef(null);
+
+  // Parallax: move the image directly instead of re-rendering on every scroll frame
   React.useEffect(() => {
-    let ticking = false;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let frame = 0;
     const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        setScrollY(window.scrollY);
-        ticking = false;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const y = window.scrollY;
+        if (y <= window.innerHeight && imgRef.current)
+          imgRef.current.style.transform = `translate3d(0, ${reduced.matches ? 0 : y * 0.3}px, 0)`;
       });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onMq = e => setReducedMotion(e.matches);
-    mq.addEventListener('change', onMq);
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      mq.removeEventListener('change', onMq);
-    };
+    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); };
   }, []);
 
-  const countdown = next ? formatCountdown(eventStartDate(next), now) : null;
-  const parallaxY = (reducedMotion || scrollY > window.innerHeight) ? 0 : scrollY * 0.3;
-
   return (
-    <section id="top" style={{ position:'relative', width:'100%', height:'100vh', overflow:'hidden', display:'flex', alignItems:'flex-end' }}>
-      <img src="assets/photo-choir-museum.jpg" alt="Kammerkoret Richters Skala synger i koncertsal" fetchpriority="high"
-        style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(var(--hero-brightness))', transform:`translate3d(0, ${parallaxY}px, 0)`, willChange:'transform' }} />
-      <div style={{ position:'absolute', inset:0, background:'var(--hero-overlay)' }}></div>
+    html`<section id="top" style=${{ position:'relative', width:'100%', height:'100vh', overflow:'hidden', display:'flex', alignItems:'flex-end' }}>
+      <img ref=${imgRef} src="assets/photo-choir-museum.jpg" srcSet=${srcSet('assets/photo-choir-museum.jpg')} sizes="100vw"
+        alt="Kammerkoret Richters Skala synger i koncertsal" fetchpriority="high"
+        style=${{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(var(--hero-brightness))', willChange:'transform' }} />
+      <div style=${{ position:'absolute', inset:0, background:'var(--hero-overlay)' }}></div>
 
-      <div style={{ position:'relative', zIndex:2, padding:'0 clamp(20px,4vw,64px) clamp(48px,7vh,96px)', maxWidth:'900px' }}>
+      <div style=${{ position:'relative', zIndex:2, padding:'0 clamp(20px,4vw,64px) clamp(48px,7vh,96px)', maxWidth:'900px' }}>
         <h1 className="sr-only">Kammerkoret Richters Skala – kammerkor i København</h1>
-        <div className="eyebrow">{next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}</div>
-        <h2 className="display" style={{ fontSize:'clamp(3rem,6vw,5.8rem)', lineHeight:1.02, color:'#f7f5f0', margin:'16px 0 18px' }}>
-          {next ? next.title : 'Kommende koncerter'}
+        <div className="eyebrow">${next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}</div>
+        <h2 className="display" style=${{ fontSize:'clamp(3rem,6vw,5.8rem)', lineHeight:1.02, color:'#f7f5f0', margin:'16px 0 18px' }}>
+          ${next ? next.title : 'Kommende koncerter'}
         </h2>
-        <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'clamp(17px,1.6vw,21px)', fontStyle:'italic', lineHeight:1.65, color:'rgba(247,245,240,0.68)', marginBottom:countdown ? '20px' : '40px', maxWidth:'520px' }}>
-          {next ? <>{next.date}{next.time && next.time !== 'TBA' ? `, kl. ${next.time}` : ''}<br />{next.venue}</> : null}
+        <p style=${{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'clamp(17px,1.6vw,21px)', fontStyle:'italic', lineHeight:1.65, color:'rgba(247,245,240,0.68)', marginBottom:'40px', maxWidth:'520px' }}>
+          ${next ? html`${next.date}${next.time && next.time !== 'TBA' ? `, kl. ${next.time}` : ''}<br />${next.venue}` : null}
         </p>
-        {countdown && (
-          <div style={{
-            fontFamily:"'Outfit',system-ui,sans-serif",
-            fontSize:'clamp(18px,2vw,26px)', fontWeight:300, letterSpacing:'0.08em',
-            color:'#c8933a', fontVariantNumeric:'tabular-nums',
-            marginBottom:'40px',
-          }}>
-            {countdown}
-          </div>
-        )}
-        <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
-          <a href="#koncerter" className="btn" style={{ background:'#f7f5f0', color:'#0d0d0b' }}>Køb billetter</a>
-          <a href="#koncerter" className="btn" style={{ background:'transparent', color:'#f7f5f0', border:'1px solid rgba(247,245,240,0.35)' }}>Se alle koncerter</a>
+        ${next && html`<${Countdown} target=${eventStartDate(next)} />`}
+        <div style=${{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
+          <a href="#koncerter" className="btn" style=${{ background:'#f7f5f0', color:'#0d0d0b' }}>Køb billetter</a>
+          <a href="#koncerter" className="btn" style=${{ background:'transparent', color:'#f7f5f0', border:'1px solid rgba(247,245,240,0.35)' }}>Se alle koncerter</a>
         </div>
       </div>
 
-      <div style={{ position:'absolute', bottom:'28px', right:'clamp(20px,4vw,48px)', zIndex:2 }}>
-        <div className="tag" style={{ color:'rgba(247,245,240,0.4)', writingMode:'vertical-rl', transform:'rotate(180deg)' }}>
+      <div style=${{ position:'absolute', bottom:'28px', right:'clamp(20px,4vw,48px)', zIndex:2 }}>
+        <div className="tag" style=${{ color:'rgba(247,245,240,0.4)', writingMode:'vertical-rl', transform:'rotate(180deg)' }}>
           Rul ned
         </div>
       </div>
-    </section>
+    </section>`
   );
 };
 
@@ -596,89 +596,89 @@ const Hero = () => {
 const ConcertRow = ({ e, i, isPast, expanded, setExpanded, calMenu, setCalMenu }) => {
   const isMobile = React.useContext(LayoutCtx);
   return (
-    <div>
+    html`<div>
       <div
-        onClick={() => setExpanded(expanded === e.id ? null : e.id)}
+        onClick=${() => setExpanded(expanded === e.id ? null : e.id)}
         className="concert-row"
-        style={{
+        style=${{
           display:'grid', gridTemplateColumns:'72px 1fr auto', gap:'0 28px',
           alignItems:'center', padding:'22px 0', cursor:'pointer',
           borderTop: i === 0 ? 'none' : '1px solid var(--border)',
           opacity: isPast ? 0.65 : 1,
         }}
       >
-        <div style={{ textAlign:'center', borderRight:'1px solid var(--border)', paddingRight:'20px' }}>
-          <div className="display" style={{ fontSize:'42px', lineHeight:1, color: isPast ? 'var(--fg-muted)' : 'var(--accent)' }}>{e.day}</div>
-          <div className="tag" style={{ marginTop:'3px' }}>{e.month}</div>
+        <div style=${{ textAlign:'center', borderRight:'1px solid var(--border)', paddingRight:'20px' }}>
+          <div className="display" style=${{ fontSize:'42px', lineHeight:1, color: isPast ? 'var(--fg-muted)' : 'var(--accent)' }}>${e.day}</div>
+          <div className="tag" style=${{ marginTop:'3px' }}>${e.month}</div>
         </div>
-        <div style={{ paddingLeft:'4px' }}>
-          <div className="display" style={{ fontSize:'clamp(18px,2vw,24px)', fontWeight:400, lineHeight:1.2 }}>{e.title}</div>
-          <div className="italic-meta" style={{ marginTop:'4px' }}>{e.venue}</div>
+        <div style=${{ paddingLeft:'4px' }}>
+          <div className="display" style=${{ fontSize:'clamp(18px,2vw,24px)', fontWeight:400, lineHeight:1.2 }}>${e.title}</div>
+          <div className="italic-meta" style=${{ marginTop:'4px' }}>${e.venue}</div>
         </div>
-        <div style={{ textAlign:'right' }}>
-          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'13px', color:'var(--fg-muted)' }}>{!isPast && e.time !== 'TBA' ? e.time : ''}</div>
-          <div className="tag" style={{ color: isPast || e.soldOut ? 'var(--fg-muted)' : 'var(--accent)', marginTop:'6px' }}>
-            {isPast ? 'Afholdt' : e.soldOut ? 'Udsolgt' : 'Billetter'}
+        <div style=${{ textAlign:'right' }}>
+          <div style=${{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'13px', color:'var(--fg-muted)' }}>${!isPast && e.time !== 'TBA' ? e.time : ''}</div>
+          <div className="tag" style=${{ color: isPast || e.soldOut ? 'var(--fg-muted)' : 'var(--accent)', marginTop:'6px' }}>
+            ${isPast ? 'Afholdt' : e.soldOut ? 'Udsolgt' : 'Billetter'}
           </div>
         </div>
       </div>
 
-      {expanded === e.id && (
-        <div style={{ background:'var(--card-bg)', border:'1px solid var(--border)', padding: isMobile ? '20px' : '28px 32px', marginBottom:'2px', display:'grid', gridTemplateColumns: (isMobile || isPast) ? '1fr' : '1fr auto', gap: isMobile ? '20px' : '32px', alignItems:'start', overflowWrap:'anywhere' }}>
+      ${expanded === e.id && (
+        html`<div style=${{ background:'var(--card-bg)', border:'1px solid var(--border)', padding: isMobile ? '20px' : '28px 32px', marginBottom:'2px', display:'grid', gridTemplateColumns: (isMobile || isPast) ? '1fr' : '1fr auto', gap: isMobile ? '20px' : '32px', alignItems:'start', overflowWrap:'anywhere' }}>
           <div>
-            {e.description && e.description !== 'TBA' && (
-              <div className="body" style={{ marginBottom:'16px' }}>{e.description}</div>
+            ${e.description && e.description !== 'TBA' && (
+              html`<div className="body" style=${{ marginBottom:'16px' }}>${e.description}</div>`
             )}
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'24px 36px', marginTop:'8px' }}>
-              {[['Dato', e.date], ['Kl.', e.time !== 'TBA' ? e.time : '—'], ['Sted', e.venue], ...(e.address ? [['Adresse', e.address]] : [])].map(([k,v]) => (
-                <div key={k}>
-                  <div className="tag" style={{ marginBottom:'4px' }}>{k}</div>
-                  <div className="italic-meta" style={{ color:'var(--fg)' }}>{v}</div>
-                </div>
+            <div style=${{ display:'flex', flexWrap:'wrap', gap:'24px 36px', marginTop:'8px' }}>
+              ${[['Dato', e.date], ['Kl.', e.time !== 'TBA' ? e.time : '—'], ['Sted', e.venue], ...(e.address ? [['Adresse', e.address]] : [])].map(([k,v]) => (
+                html`<div key=${k}>
+                  <div className="tag" style=${{ marginBottom:'4px' }}>${k}</div>
+                  <div className="italic-meta" style=${{ color:'var(--fg)' }}>${v}</div>
+                </div>`
               ))}
             </div>
           </div>
-          {!isPast && (
-            <div style={{ minWidth:'160px' }}>
-              {!e.soldOut ? (
+          ${!isPast && (
+            html`<div style=${{ minWidth:'160px' }}>
+              ${!e.soldOut ? (
                 e.ticketLink ? (
-                  <a href={e.ticketLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light"
-                    style={{ display:'block', width:'100%', padding:'12px', marginBottom:'8px', textAlign:'center' }}>Køb billetter</a>
+                  html`<a href=${e.ticketLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light"
+                    style=${{ display:'block', width:'100%', padding:'12px', marginBottom:'8px', textAlign:'center' }}>Køb billetter</a>`
                 ) : (
-                  <button className="btn btn-sm btn-light" style={{ width:'100%', padding:'12px', marginBottom:'8px' }}>Køb billetter</button>
+                  html`<button className="btn btn-sm btn-light" style=${{ width:'100%', padding:'12px', marginBottom:'8px' }}>Køb billetter</button>`
                 )
               ) : (
-                <div className="kicker" style={{ padding:'12px', textAlign:'center', border:'1px solid var(--border)', marginBottom:'8px' }}>Udsolgt</div>
+                html`<div className="kicker" style=${{ padding:'12px', textAlign:'center', border:'1px solid var(--border)', marginBottom:'8px' }}>Udsolgt</div>`
               )}
-              <div style={{ position:'relative' }}>
-                <button onClick={() => setCalMenu(calMenu === e.id ? null : e.id)}
-                  className="btn btn-sm" style={{ width:'100%', color:'var(--fg-muted)', border:'1px solid var(--border)', padding:'11px' }}>
+              <div style=${{ position:'relative' }}>
+                <button onClick=${() => setCalMenu(calMenu === e.id ? null : e.id)}
+                  className="btn btn-sm" style=${{ width:'100%', color:'var(--fg-muted)', border:'1px solid var(--border)', padding:'11px' }}>
                   Tilføj til kalender
                 </button>
-                {calMenu === e.id && (
-                  <div style={{ position:'absolute', bottom:'calc(100% + 4px)', left:0, right:0, background:'var(--bg)', border:'1px solid var(--border)', zIndex:10 }}>
-                    <button onClick={() => { openGoogleCalendar(e); setCalMenu(null); }}
-                      className="btn btn-sm" style={{ display:'block', width:'100%', textAlign:'left', color:'var(--fg-muted)', borderBottom:'1px solid var(--border)', padding:'11px' }}>
+                ${calMenu === e.id && (
+                  html`<div style=${{ position:'absolute', bottom:'calc(100% + 4px)', left:0, right:0, background:'var(--bg)', border:'1px solid var(--border)', zIndex:10 }}>
+                    <button onClick=${() => { openGoogleCalendar(e); setCalMenu(null); }}
+                      className="btn btn-sm" style=${{ display:'block', width:'100%', textAlign:'left', color:'var(--fg-muted)', borderBottom:'1px solid var(--border)', padding:'11px' }}>
                       Google Kalender
                     </button>
-                    <button onClick={() => { downloadICS(e); setCalMenu(null); }}
-                      className="btn btn-sm" style={{ display:'block', width:'100%', textAlign:'left', color:'var(--fg-muted)', padding:'11px' }}>
+                    <button onClick=${() => { downloadICS(e); setCalMenu(null); }}
+                      className="btn btn-sm" style=${{ display:'block', width:'100%', textAlign:'left', color:'var(--fg-muted)', padding:'11px' }}>
                       Apple / Outlook
                     </button>
-                  </div>
+                  </div>`
                 )}
               </div>
-              {e.eventLink && (
-                <a href={e.eventLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm"
-                  style={{ display:'block', textAlign:'center', color:'var(--fg-muted)', border:'1px solid var(--border)', padding:'11px', marginTop:'8px' }}>
+              ${e.eventLink && (
+                html`<a href=${e.eventLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm"
+                  style=${{ display:'block', textAlign:'center', color:'var(--fg-muted)', border:'1px solid var(--border)', padding:'11px', marginTop:'8px' }}>
                   Facebook-begivenhed
-                </a>
+                </a>`
               )}
-            </div>
+            </div>`
           )}
-        </div>
+        </div>`
       )}
-    </div>
+    </div>`
   );
 };
 
@@ -689,54 +689,52 @@ const Koncertkalender = () => {
   const [showPast, setShowPast] = React.useState(false);
 
   const now = Date.now();
-  const upcoming = events.filter(e => eventEndDate(e).getTime() > now)
-    .sort((a, b) => eventStartDate(a) - eventStartDate(b));
-  const past = events.filter(e => eventEndDate(e).getTime() <= now)
-    .sort((a, b) => eventStartDate(b) - eventStartDate(a));
+  const upcoming = events.filter(e => isUpcoming(e, now)).sort((a, b) => eventStartDate(a) - eventStartDate(b));
+  const past = events.filter(e => !isUpcoming(e, now)).sort((a, b) => eventStartDate(b) - eventStartDate(a));
 
   return (
-    <section id="koncerter" className="section" style={{ background:'var(--section-bg)' }}>
+    html`<section id="koncerter" className="section" style=${{ background:'var(--section-bg)' }}>
       <div className="container">
-        <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'40px', paddingBottom:'20px', borderBottom:'1px solid var(--border)' }}>
+        <div style=${{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'40px', paddingBottom:'20px', borderBottom:'1px solid var(--border)' }}>
           <div>
             <div className="eyebrow">Sæson 2026</div>
-            <h2 className="display h2" style={{ marginTop:'10px' }}>Kommende koncerter</h2>
+            <h2 className="display h2" style=${{ marginTop:'10px' }}>Kommende koncerter</h2>
           </div>
-          <div className="italic-meta">{upcoming.length} koncerter</div>
+          <div className="italic-meta">${upcoming.length} koncerter</div>
         </div>
 
-        {upcoming.length === 0 && (
-          <StatusMessage>Ingen kommende koncerter i kalenderen lige nu — følg med her og på vores sociale medier.</StatusMessage>
+        ${upcoming.length === 0 && (
+          html`<${StatusMessage}>Ingen kommende koncerter i kalenderen lige nu — følg med her og på vores sociale medier.<//>`
         )}
-        {upcoming.map((e, i) => (
-          <ConcertRow key={e.id} e={e} i={i} isPast={false}
-            expanded={expanded} setExpanded={setExpanded} calMenu={calMenu} setCalMenu={setCalMenu} />
+        ${upcoming.map((e, i) => (
+          html`<${ConcertRow} key=${e.id} e=${e} i=${i} isPast=${false}
+            expanded=${expanded} setExpanded=${setExpanded} calMenu=${calMenu} setCalMenu=${setCalMenu} />`
         ))}
-        <div style={{ borderTop:'1px solid var(--border)' }}></div>
+        <div style=${{ borderTop:'1px solid var(--border)' }}></div>
 
-        {past.length > 0 && (
-          <div style={{ marginTop:'48px' }}>
-            <button onClick={() => setShowPast(s => !s)} aria-expanded={showPast}
-              style={{ display:'flex', alignItems:'center', gap:'10px', padding:'4px 0' }}>
-              <span className="eyebrow">Tidligere koncerter ({past.length})</span>
+        ${past.length > 0 && (
+          html`<div style=${{ marginTop:'48px' }}>
+            <button onClick=${() => setShowPast(s => !s)} aria-expanded=${showPast}
+              style=${{ display:'flex', alignItems:'center', gap:'10px', padding:'4px 0' }}>
+              <span className="eyebrow">Tidligere koncerter (${past.length})</span>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"
-                style={{ opacity:0.6, transform: showPast ? 'rotate(180deg)' : 'none', transition:'transform 200ms' }}>
+                style=${{ opacity:0.6, transform: showPast ? 'rotate(180deg)' : 'none', transition:'transform 200ms' }}>
                 <path d="M2 3.5 L5 6.5 L8 3.5"/>
               </svg>
             </button>
-            {showPast && (
-              <div style={{ marginTop:'16px' }}>
-                {past.map((e, i) => (
-                  <ConcertRow key={e.id} e={e} i={i} isPast={true}
-                    expanded={expanded} setExpanded={setExpanded} calMenu={calMenu} setCalMenu={setCalMenu} />
+            ${showPast && (
+              html`<div style=${{ marginTop:'16px' }}>
+                ${past.map((e, i) => (
+                  html`<${ConcertRow} key=${e.id} e=${e} i=${i} isPast=${true}
+                    expanded=${expanded} setExpanded=${setExpanded} calMenu=${calMenu} setCalMenu=${setCalMenu} />`
                 ))}
-                <div style={{ borderTop:'1px solid var(--border)' }}></div>
-              </div>
+                <div style=${{ borderTop:'1px solid var(--border)' }}></div>
+              </div>`
             )}
-          </div>
+          </div>`
         )}
       </div>
-    </section>
+    </section>`
   );
 };
 
@@ -744,44 +742,46 @@ const Koncertkalender = () => {
 const Galleri = () => {
   const isMobile = React.useContext(LayoutCtx);
   const [lightbox, setLightbox] = React.useState(null);
+  const step = dir => setLightbox(i => (i + dir + PHOTOS.length) % PHOTOS.length);
+  useKeys(lightbox !== null, { Escape: () => setLightbox(null), ArrowLeft: () => step(-1), ArrowRight: () => step(1) });
 
   return (
-    <section id="galleri" style={{ background:'var(--alt-section-bg)', padding:'80px 0 0' }}>
-      <div className="container" style={{ padding:'0 clamp(20px,4vw,48px)', marginBottom:'40px' }}>
+    html`<section id="galleri" style=${{ background:'var(--alt-section-bg)', padding:'80px 0 0' }}>
+      <div className="container" style=${{ padding:'0 clamp(20px,4vw,48px)', marginBottom:'40px' }}>
         <div className="eyebrow">Fotografi</div>
-        <h2 className="display h2" style={{ marginTop:'10px' }}>Billedgalleri</h2>
+        <h2 className="display h2" style=${{ marginTop:'10px' }}>Billedgalleri</h2>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap:'2px' }}>
-        {PHOTOS.map((p, i) => {
+      <div style=${{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap:'2px' }}>
+        ${PHOTOS.map((p, i) => {
           const wide = !isMobile && (i === 0 || i === 4);
           return (
-            <div key={i} onClick={() => setLightbox(i)} className="gallery-cell"
-              style={{ aspectRatio: wide ? '16/9' : '4/3', gridColumn: wide ? 'span 2' : 'span 1' }}>
-              <img src={p.src} alt={p.alt} loading="lazy" decoding="async" />
-              <div className="caption">{p.caption}</div>
-            </div>
+            html`<div key=${i} onClick=${() => setLightbox(i)} className="gallery-cell"
+              style=${{ aspectRatio: wide ? '16/9' : '4/3', gridColumn: wide ? 'span 2' : 'span 1' }}>
+              <img src=${p.src} srcSet=${srcSet(p.src)} sizes=${isMobile ? '50vw' : wide ? '50vw' : '25vw'} alt=${p.alt} loading="lazy" decoding="async" />
+              <div className="caption">${p.caption}</div>
+            </div>`
           );
         })}
       </div>
 
-      {lightbox !== null && (
-        <div onClick={() => setLightbox(null)} style={{
+      ${lightbox !== null && (
+        html`<div onClick=${() => setLightbox(null)} style=${{
           position:'fixed', inset:0, zIndex:500, background:'rgba(13,13,11,0.95)',
           display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out',
         }}>
-          <img src={PHOTOS[lightbox].src} alt={PHOTOS[lightbox].alt} style={{ maxWidth:'90vw', maxHeight:'88vh', objectFit:'contain' }} />
-          <div style={{ position:'absolute', bottom:'32px', left:'50%', transform:'translateX(-50%)',
+          <img src=${PHOTOS[lightbox].src} alt=${PHOTOS[lightbox].alt} style=${{ maxWidth:'90vw', maxHeight:'88vh', objectFit:'contain' }} />
+          <div style=${{ position:'absolute', bottom:'32px', left:'50%', transform:'translateX(-50%)',
             fontFamily:"'EB Garamond',Georgia,serif", fontSize:'15px', fontStyle:'italic', color:'rgba(247,245,240,0.6)' }}>
-            {PHOTOS[lightbox].caption}
+            ${PHOTOS[lightbox].caption}
           </div>
-          <button onClick={ev => { ev.stopPropagation(); setLightbox((lightbox - 1 + PHOTOS.length) % PHOTOS.length); }}
-            style={{ position:'absolute', left:'32px', top:'50%', transform:'translateY(-50%)', color:'rgba(247,245,240,0.5)', fontSize:'32px', fontFamily:'serif' }}>‹</button>
-          <button onClick={ev => { ev.stopPropagation(); setLightbox((lightbox + 1) % PHOTOS.length); }}
-            style={{ position:'absolute', right:'32px', top:'50%', transform:'translateY(-50%)', color:'rgba(247,245,240,0.5)', fontSize:'32px', fontFamily:'serif' }}>›</button>
-        </div>
+          <button onClick=${ev => { ev.stopPropagation(); step(-1); }} aria-label="Forrige billede"
+            style=${{ position:'absolute', left:'32px', top:'50%', transform:'translateY(-50%)', color:'rgba(247,245,240,0.5)', fontSize:'32px', fontFamily:'serif' }}>‹</button>
+          <button onClick=${ev => { ev.stopPropagation(); step(1); }} aria-label="Næste billede"
+            style=${{ position:'absolute', right:'32px', top:'50%', transform:'translateY(-50%)', color:'rgba(247,245,240,0.5)', fontSize:'32px', fontFamily:'serif' }}>›</button>
+        </div>`
       )}
-    </section>
+    </section>`
   );
 };
 
@@ -789,62 +789,40 @@ const Galleri = () => {
 const STATIC_BARS = [4,8,14,6,18,10,16,8,12,6,14,10];
 
 const Waveform = ({ active, accent, muted }) => (
-  <svg width="48" height="20" viewBox="0 0 48 20" fill="none">
-    {STATIC_BARS.map((h, i) => (
-      <rect key={i}
-        className={active ? 'krs-bar krs-bar-active' : 'krs-bar'}
-        x={i*4} y={(20-h)/2} width="2.5" rx="1.25" height={h}
-        fill={active ? accent : muted}
-        style={{
+  html`<svg width="48" height="20" viewBox="0 0 48 20" fill="none">
+    ${STATIC_BARS.map((h, i) => (
+      html`<rect key=${i}
+        className=${active ? 'krs-bar krs-bar-active' : 'krs-bar'}
+        x=${i*4} y=${(20-h)/2} width="2.5" rx="1.25" height=${h}
+        fill=${active ? accent : muted}
+        style=${{
           transition:'fill 200ms',
           animationDelay: active ? `${(i % 6) * 90}ms` : '0ms',
           ['--bar-peak']: active ? (1.2 + (i % 4) * 0.35).toFixed(2) : '1',
           transformBox: 'fill-box',
           transformOrigin: 'center',
         }}
-        opacity={active ? (0.5 + (i%3)*0.17) : 0.5}
-      />
+        opacity=${active ? (0.5 + (i%3)*0.17) : 0.5}
+      />`
     ))}
-  </svg>
+  </svg>`
 );
 
 const Optagelser = () => {
   const t = React.useContext(ThemeCtx);
   const isMobile = React.useContext(LayoutCtx);
 
-  const [recordings, setRecordings] = React.useState([]);
-  const [audioStatus, setAudioStatus] = React.useState('loading');
+  const { items: recordings, status: audioStatus } = useJsonList('recordings.json');
   const [playingIdx, setPlayingIdx] = React.useState(null);
   const [progress, setProgress] = React.useState(0);
   const [durations, setDurations] = React.useState({});
   const audioRef = React.useRef(null);
   const playingIdxRef = React.useRef(null);
 
-  const [videos, setVideos] = React.useState([]);
-  const [videoStatus, setVideoStatus] = React.useState('loading');
+  const { items: videos, status: videoStatus } = useJsonList('videos.json');
   const [lightbox, setLightbox] = React.useState(null);
-
-  React.useEffect(() => {
-    fetch('recordings.json')
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(data => {
-        const entries = Array.isArray(data) ? data : [];
-        setRecordings(entries);
-        setAudioStatus(entries.length ? 'ready' : 'empty');
-      })
-      .catch(() => setAudioStatus('error'));
-  }, []);
-
-  React.useEffect(() => {
-    fetch('videos.json')
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(data => {
-        const entries = Array.isArray(data) ? data : [];
-        setVideos(entries);
-        setVideoStatus(entries.length ? 'ready' : 'empty');
-      })
-      .catch(() => setVideoStatus('error'));
-  }, []);
+  const stepVideo = dir => setLightbox(i => (i + dir + videos.length) % videos.length);
+  useKeys(lightbox !== null, { Escape: () => setLightbox(null), ArrowLeft: () => stepVideo(-1), ArrowRight: () => stepVideo(1) });
 
   React.useEffect(() => {
     const audio = audioRef.current;
@@ -861,13 +839,6 @@ const Optagelser = () => {
       audio.removeEventListener('ended', onEnd);
     };
   }, []);
-
-  React.useEffect(() => {
-    if (lightbox === null) return;
-    const onKey = e => { if (e.key === 'Escape') setLightbox(null); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [lightbox]);
 
   const toggle = (i) => {
     const audio = audioRef.current;
@@ -891,114 +862,114 @@ const Optagelser = () => {
   };
 
   return (
-    <section id="optagelser" className="section" style={{ background:'var(--section-bg)' }}>
-      <audio ref={audioRef} />
+    html`<section id="optagelser" className="section" style=${{ background:'var(--section-bg)' }}>
+      <audio ref=${audioRef} />
       <div className="container">
         <div className="eyebrow">Lyd og video</div>
-        <h2 className="display h2" style={{ marginTop:'10px', marginBottom:'48px' }}>Optagelser</h2>
+        <h2 className="display h2" style=${{ marginTop:'10px', marginBottom:'48px' }}>Optagelser</h2>
 
-        <div style={{ maxWidth:'780px', marginBottom:'72px' }}>
-          <div className="kicker" style={{ marginBottom:'18px' }}>Lyd</div>
+        <div style=${{ maxWidth:'780px', marginBottom:'72px' }}>
+          <div className="kicker" style=${{ marginBottom:'18px' }}>Lyd</div>
 
-          {audioStatus === 'loading' && <StatusMessage>Henter optagelser…</StatusMessage>}
-          {audioStatus === 'error'   && <StatusMessage>Optagelser er midlertidigt utilgængelige.</StatusMessage>}
-          {audioStatus === 'empty'   && <StatusMessage>Ingen optagelser fundet.</StatusMessage>}
+          ${audioStatus === 'loading' && html`<${StatusMessage}>Henter optagelser…<//>`}
+          ${audioStatus === 'error'   && html`<${StatusMessage}>Optagelser er midlertidigt utilgængelige.<//>`}
+          ${audioStatus === 'empty'   && html`<${StatusMessage}>Ingen optagelser fundet.<//>`}
 
-          {audioStatus === 'ready' && recordings.map((rec, i) => {
+          ${audioStatus === 'ready' && recordings.map((rec, i) => {
             const isPlaying = playingIdx === i;
             return (
-              <div key={i} style={{ display:'grid', gridTemplateColumns:'40px 1fr auto', gap:'0 20px', alignItems:'center', padding:'18px 0', borderTop:'1px solid var(--border)' }}>
-                <button onClick={() => toggle(i)} aria-label={isPlaying ? 'Pause' : 'Afspil'} style={{
+              html`<div key=${i} style=${{ display:'grid', gridTemplateColumns:'40px 1fr auto', gap:'0 20px', alignItems:'center', padding:'18px 0', borderTop:'1px solid var(--border)' }}>
+                <button onClick=${() => toggle(i)} aria-label=${isPlaying ? 'Pause' : 'Afspil'} style=${{
                   width:'40px', height:'40px',
                   border:`1px solid ${isPlaying ? 'var(--accent)' : 'var(--border)'}`,
                   background: isPlaying ? 'var(--accent)' : 'transparent',
                   display:'flex', alignItems:'center', justifyContent:'center',
                   transition:'all 200ms',
                 }}>
-                  {isPlaying ? (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="#0d0d0b">
+                  ${isPlaying ? (
+                    html`<svg width="12" height="12" viewBox="0 0 12 12" fill="#0d0d0b">
                       <rect x="1" y="1" width="4" height="10" rx="0.5"/><rect x="7" y="1" width="4" height="10" rx="0.5"/>
-                    </svg>
+                    </svg>`
                   ) : (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill={t.fg}>
+                    html`<svg width="12" height="12" viewBox="0 0 12 12" fill=${t.fg}>
                       <path d="M2 1.5 L11 6 L2 10.5 Z"/>
-                    </svg>
+                    </svg>`
                   )}
                 </button>
                 <div>
-                  <div className="display" style={{ fontSize:'20px', fontWeight:400, lineHeight:1.2 }}>{rec.title}</div>
-                  {isPlaying && (
-                    <div style={{ marginTop:'10px', height:'3px', background:'var(--border)', position:'relative' }}>
-                      <div style={{ position:'absolute', left:0, top:0, height:'100%', width:`${progress * 100}%`, background:'var(--accent)', transition:'width 200ms' }}></div>
-                    </div>
+                  <div className="display" style=${{ fontSize:'20px', fontWeight:400, lineHeight:1.2 }}>${rec.title}</div>
+                  ${isPlaying && (
+                    html`<div style=${{ marginTop:'10px', height:'3px', background:'var(--border)', position:'relative' }}>
+                      <div style=${{ position:'absolute', left:0, top:0, height:'100%', width:`${progress * 100}%`, background:'var(--accent)', transition:'width 200ms' }}></div>
+                    </div>`
                   )}
                 </div>
-                <div style={{ textAlign:'right' }}>
-                  {isPlaying
-                    ? <Waveform active accent={t.accent} muted={t.fgMuted} />
-                    : <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color:'var(--fg-muted)' }}>{fmtTime(durations[i])}</div>}
+                <div style=${{ textAlign:'right' }}>
+                  ${isPlaying
+                    ? html`<${Waveform} active accent=${t.accent} muted=${t.fgMuted} />`
+                    : html`<div style=${{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'12px', color:'var(--fg-muted)' }}>${fmtTime(durations[i])}</div>`}
                 </div>
-              </div>
+              </div>`
             );
           })}
-          {audioStatus === 'ready' && <div style={{ borderTop:'1px solid var(--border)' }}></div>}
+          ${audioStatus === 'ready' && html`<div style=${{ borderTop:'1px solid var(--border)' }}></div>`}
         </div>
 
         <div>
-          <div className="kicker" style={{ marginBottom:'18px' }}>Video</div>
+          <div className="kicker" style=${{ marginBottom:'18px' }}>Video</div>
 
-          {videoStatus === 'loading' && <StatusMessage>Henter videoer…</StatusMessage>}
-          {videoStatus === 'error'   && <StatusMessage>Videoer er midlertidigt utilgængelige.</StatusMessage>}
-          {videoStatus === 'empty'   && <StatusMessage>Ingen videoer fundet.</StatusMessage>}
+          ${videoStatus === 'loading' && html`<${StatusMessage}>Henter videoer…<//>`}
+          ${videoStatus === 'error'   && html`<${StatusMessage}>Videoer er midlertidigt utilgængelige.<//>`}
+          ${videoStatus === 'empty'   && html`<${StatusMessage}>Ingen videoer fundet.<//>`}
 
-          {videoStatus === 'ready' && (
-            <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap:'2px' }}>
-              {videos.map((v, i) => (
-                <div key={i} onClick={() => setLightbox(i)} className="video-card">
-                  <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px' }}>
+          ${videoStatus === 'ready' && (
+            html`<div style=${{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap:'2px' }}>
+              ${videos.map((v, i) => (
+                html`<div key=${i} onClick=${() => setLightbox(i)} className="video-card">
+                  <div style=${{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px' }}>
                     <div className="play-circle">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="rgba(247,245,240,0.9)">
                         <path d="M3 2 L14 8 L3 14 Z"/>
                       </svg>
                     </div>
-                    <div className="display" style={{ fontSize:'17px', fontWeight:400, color:'rgba(247,245,240,0.85)', lineHeight:1.3, textAlign:'center', padding:'0 20px', maxWidth:'260px' }}>
-                      {v.title}
+                    <div className="display" style=${{ fontSize:'17px', fontWeight:400, color:'rgba(247,245,240,0.85)', lineHeight:1.3, textAlign:'center', padding:'0 20px', maxWidth:'260px' }}>
+                      ${v.title}
                     </div>
                   </div>
-                </div>
+                </div>`
               ))}
-            </div>
+            </div>`
           )}
         </div>
       </div>
 
-      {lightbox !== null && (
-        <div onClick={() => setLightbox(null)}
-          style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.93)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'20px', cursor:'zoom-out' }}>
-          <button onClick={() => setLightbox(null)} aria-label="Luk"
-            style={{ position:'absolute', top:'20px', right:'24px', color:'rgba(247,245,240,0.6)', fontSize:'28px', lineHeight:1, padding:'4px' }}>✕</button>
-          <video key={lightbox} src={videos[lightbox].url} controls autoPlay
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth:'100%', maxHeight:'80vh', outline:'none', cursor:'default' }} />
-          <div className="display" style={{ marginTop:'16px', fontSize:'18px', fontWeight:400, color:'rgba(247,245,240,0.7)' }}>
-            {videos[lightbox].title}
+      ${lightbox !== null && (
+        html`<div onClick=${() => setLightbox(null)}
+          style=${{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.93)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'20px', cursor:'zoom-out' }}>
+          <button onClick=${() => setLightbox(null)} aria-label="Luk"
+            style=${{ position:'absolute', top:'20px', right:'24px', color:'rgba(247,245,240,0.6)', fontSize:'28px', lineHeight:1, padding:'4px' }}>✕</button>
+          <video key=${lightbox} src=${videos[lightbox].url} controls autoPlay
+            onClick=${e => e.stopPropagation()}
+            style=${{ maxWidth:'100%', maxHeight:'80vh', outline:'none', cursor:'default' }} />
+          <div className="display" style=${{ marginTop:'16px', fontSize:'18px', fontWeight:400, color:'rgba(247,245,240,0.7)' }}>
+            ${videos[lightbox].title}
           </div>
-          {videos.length > 1 && (
-            <div style={{ position:'absolute', bottom:'24px', display:'flex', gap:'12px' }}>
-              {[
+          ${videos.length > 1 && (
+            html`<div style=${{ position:'absolute', bottom:'24px', display:'flex', gap:'12px' }}>
+              ${[
                 { dir:-1, glyph:'‹' },
                 { dir: 1, glyph:'›' },
               ].map(({ dir, glyph }) => (
-                <button key={dir} onClick={e => { e.stopPropagation(); setLightbox(i => (i + dir + videos.length) % videos.length); }}
-                  style={{ border:'1px solid rgba(247,245,240,0.3)', color:'rgba(247,245,240,0.6)', fontFamily:'serif', fontSize:'20px', padding:'6px 16px' }}>
-                  {glyph}
-                </button>
+                html`<button key=${dir} onClick=${e => { e.stopPropagation(); stepVideo(dir); }}
+                  style=${{ border:'1px solid rgba(247,245,240,0.3)', color:'rgba(247,245,240,0.6)', fontFamily:'serif', fontSize:'20px', padding:'6px 16px' }}>
+                  ${glyph}
+                </button>`
               ))}
-            </div>
+            </div>`
           )}
-        </div>
+        </div>`
       )}
-    </section>
+    </section>`
   );
 };
 
@@ -1010,52 +981,52 @@ const OmKoret = () => {
   const pad = 'clamp(40px,6vw,88px) clamp(28px,5vw,72px)';
 
   return (
-    <section id="om-koret" style={{ background:'var(--section-bg)' }}>
-      <div style={{ display:'grid', gridTemplateColumns: cols, minHeight: isMobile ? 'unset' : '540px' }}>
-        <div style={{ overflow:'hidden', position:'relative', height: imgHeight }}>
-          <img src="assets/photo-choir-full.jpg" alt="Kammerkoret Richters Skala" loading="lazy" decoding="async"
-            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', filter:'brightness(var(--about-img-brightness))' }} />
-          {!isMobile && <div style={{ position:'absolute', inset:0, background:'var(--about-overlay)' }}></div>}
+    html`<section id="om-koret" style=${{ background:'var(--section-bg)' }}>
+      <div style=${{ display:'grid', gridTemplateColumns: cols, minHeight: isMobile ? 'unset' : '540px' }}>
+        <div style=${{ overflow:'hidden', position:'relative', height: imgHeight }}>
+          <img src="assets/photo-choir-full.jpg" srcSet=${srcSet('assets/photo-choir-full.jpg')} sizes=${isMobile ? '100vw' : '50vw'} alt="Kammerkoret Richters Skala" loading="lazy" decoding="async"
+            style=${{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', filter:'brightness(var(--about-img-brightness))' }} />
+          ${!isMobile && html`<div style=${{ position:'absolute', inset:0, background:'var(--about-overlay)' }}></div>`}
         </div>
-        <div style={{ padding: pad, display:'flex', flexDirection:'column', justifyContent:'center' }}>
+        <div style=${{ padding: pad, display:'flex', flexDirection:'column', justifyContent:'center' }}>
           <div className="eyebrow">Om koret</div>
-          <h2 className="display" style={{ fontSize:'clamp(1.8rem,3vw,2.8rem)', lineHeight:1.08, margin:'14px 0 20px' }}>
+          <h2 className="display" style=${{ fontSize:'clamp(1.8rem,3vw,2.8rem)', lineHeight:1.08, margin:'14px 0 20px' }}>
             Musik med substans<br />og nærvær
           </h2>
-          <p className="body" style={{ marginBottom:'20px' }}>
+          <p className="body" style=${{ marginBottom:'20px' }}>
             Kammerkoret Richters Skala er et dansk SATB-kammerkor på 25 sangere med solistisk ansvar og høj musikalsk ambition. Koret specialiserer sig i et bredt repertoire med særlig forkærlighed for nordisk musik.
           </p>
-          <p className="body" style={{ marginBottom:'32px' }}>
+          <p className="body" style=${{ marginBottom:'32px' }}>
             Koret er grundlagt og ledes af <em>Laus Richter Larsen</em>, uddannet kordirigent, sanger og sangpædagog fra Det Kongelige Danske Musikkonservatorium.
           </p>
-          <a href="#kontakt" className="btn btn-outline" style={{ alignSelf:'flex-start', padding:'12px 28px' }}>Booking og kontakt</a>
+          <a href="#kontakt" className="btn btn-outline" style=${{ alignSelf:'flex-start', padding:'12px 28px' }}>Booking og kontakt</a>
         </div>
       </div>
 
-      <div style={{ background:'var(--card-bg)', display:'grid', gridTemplateColumns: cols, minHeight: isMobile ? 'unset' : '420px' }}>
-        <div style={{ padding: pad, display:'flex', flexDirection:'column', justifyContent:'center' }}>
+      <div style=${{ background:'var(--card-bg)', display:'grid', gridTemplateColumns: cols, minHeight: isMobile ? 'unset' : '420px' }}>
+        <div style=${{ padding: pad, display:'flex', flexDirection:'column', justifyContent:'center' }}>
           <div className="eyebrow">Dirigenten</div>
-          <h3 className="display" style={{ fontSize:'clamp(1.6rem,2.5vw,2.4rem)', lineHeight:1.1, margin:'14px 0 20px' }}>
+          <h3 className="display" style=${{ fontSize:'clamp(1.6rem,2.5vw,2.4rem)', lineHeight:1.1, margin:'14px 0 20px' }}>
             Laus Richter Larsen
           </h3>
           <p className="body">
             Laus Richter Larsen (de/dem) er uddannet kordirigent, sanger og sangpædagog fra Det Kongelige Danske Musikkonservatorium og Kungliga Musikhögskolan i Stockholm. De er specialiseret i den nordiske musiktradition, samt moderne kormusik og vokalimprovisation. Til dagligt underviser de børn og voksne og drages af et stort ønske om at formidle klassisk musik for mennesker i alle aldre.
           </p>
-          <div style={{ marginTop:'28px', paddingTop:'24px', borderTop:'1px solid var(--border)' }}>
+          <div style=${{ marginTop:'28px', paddingTop:'24px', borderTop:'1px solid var(--border)' }}>
             <div className="eyebrow">Tidligere samarbejder</div>
-            <div style={{ marginTop:'12px', display:'flex', flexWrap:'wrap', gap:'8px' }}>
-              {['Strygekvartetten AKELA', 'Barokorkestret Originalerne', 'Soprano Cassandra Lemoine', 'samarbejdet med mezzosopran Hanna Marie le Fevre og pianist Anna Flodmark'].map(s => (
-                <span key={s} className="italic-meta" style={{ fontSize:'14px' }}>{s} ·</span>
+            <div style=${{ marginTop:'12px', display:'flex', flexWrap:'wrap', gap:'8px' }}>
+              ${['Strygekvartetten AKELA', 'Barokorkestret Originalerne', 'Soprano Cassandra Lemoine', 'samarbejdet med mezzosopran Hanna Marie le Fevre og pianist Anna Flodmark'].map(s => (
+                html`<span key=${s} className="italic-meta" style=${{ fontSize:'14px' }}>${s} ·</span>`
               ))}
             </div>
           </div>
         </div>
-        <div style={{ overflow:'hidden', height: imgHeight }}>
-          <img src="assets/photo-conductor.jpg" alt="Laus Richter Larsen" loading="lazy" decoding="async"
-            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 15%', filter:'brightness(var(--about-img-brightness))' }} />
+        <div style=${{ overflow:'hidden', height: imgHeight }}>
+          <img src="assets/photo-conductor.jpg" srcSet=${srcSet('assets/photo-conductor.jpg')} sizes=${isMobile ? '100vw' : '50vw'} alt="Laus Richter Larsen" loading="lazy" decoding="async"
+            style=${{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 15%', filter:'brightness(var(--about-img-brightness))' }} />
         </div>
       </div>
-    </section>
+    </section>`
   );
 };
 
@@ -1070,51 +1041,51 @@ const StøtOs = () => {
   const sponsorsByTier = SPONSORS.reduce((acc, s) => { (acc[s.tier] = acc[s.tier] || []).push(s.name); return acc; }, {});
 
   return (
-    <section id="støt-os" className="section" style={{ background:'var(--alt-section-bg)' }}>
+    html`<section id="støt-os" className="section" style=${{ background:'var(--alt-section-bg)' }}>
       <div className="container">
-        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '40px' : '64px', alignItems:'start' }}>
+        <div style=${{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '40px' : '64px', alignItems:'start' }}>
           <div>
             <div className="eyebrow">Støt os</div>
-            <h2 className="display h2" style={{ margin:'14px 0 20px' }}>Bliv partner</h2>
-            <p className="body" style={{ marginBottom:'20px' }}>
+            <h2 className="display h2" style=${{ margin:'14px 0 20px' }}>Bliv partner</h2>
+            <p className="body" style=${{ marginBottom:'20px' }}>
               Kammerkoret Richters Skala søger samarbejdspartnere, der ønsker at forbinde sig med høj musikalsk kvalitet, kulturelt engagement og et dedikeret publikum.
             </p>
-            <p className="body" style={{ marginBottom:'32px' }}>
+            <p className="body" style=${{ marginBottom:'32px' }}>
               Som partner får du synlighed i trykte og digitale programmer, mulighed for eksklusive arrangementer for dine gæster, og en direkte forbindelse til et levende kulturliv.
             </p>
 
-            {tiers.map(s => (
-              <div key={s.tier} style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '160px 1fr', gap: isMobile ? '4px' : '0 20px', padding:'16px 0', borderTop:'1px solid var(--border)', alignItems:'start' }}>
-                <div className="display" style={{ fontSize:'20px', fontWeight:400, color:'var(--accent)' }}>{s.tier}</div>
-                <div className="italic-meta" style={{ marginTop:'4px' }}>{s.perks}</div>
-              </div>
+            ${tiers.map(s => (
+              html`<div key=${s.tier} style=${{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '160px 1fr', gap: isMobile ? '4px' : '0 20px', padding:'16px 0', borderTop:'1px solid var(--border)', alignItems:'start' }}>
+                <div className="display" style=${{ fontSize:'20px', fontWeight:400, color:'var(--accent)' }}>${s.tier}</div>
+                <div className="italic-meta" style=${{ marginTop:'4px' }}>${s.perks}</div>
+              </div>`
             ))}
-            <div style={{ borderTop:'1px solid var(--border)', marginTop:'4px' }}></div>
+            <div style=${{ borderTop:'1px solid var(--border)', marginTop:'4px' }}></div>
           </div>
 
           <div>
             <div className="eyebrow">Eksisterende støtter</div>
-            <div style={{ marginTop:'20px' }}>
-              {Object.entries(sponsorsByTier).map(([tier, names]) => (
-                <div key={tier} style={{ marginBottom:'28px' }}>
-                  <div className="kicker" style={{ marginBottom:'12px' }}>{tier}</div>
-                  {names.map(n => (
-                    <div key={n} className="italic-meta" style={{ fontSize:'18px', color:'var(--fg)', padding:'9px 0', borderBottom:'1px solid var(--border)' }}>{n}</div>
+            <div style=${{ marginTop:'20px' }}>
+              ${Object.entries(sponsorsByTier).map(([tier, names]) => (
+                html`<div key=${tier} style=${{ marginBottom:'28px' }}>
+                  <div className="kicker" style=${{ marginBottom:'12px' }}>${tier}</div>
+                  ${names.map(n => (
+                    html`<div key=${n} className="italic-meta" style=${{ fontSize:'18px', color:'var(--fg)', padding:'9px 0', borderBottom:'1px solid var(--border)' }}>${n}</div>`
                   ))}
-                </div>
+                </div>`
               ))}
             </div>
 
-            <div style={{ marginTop:'32px', padding:'28px', border:'1px solid var(--border)' }}>
-              <div className="kicker" style={{ marginBottom:'10px' }}>A cappella-booking</div>
-              <div className="display" style={{ fontSize:'24px', marginBottom:'14px' }}>Book hele koret til en a cappella-koncert</div>
-              <div className="italic-meta" style={{ marginBottom:'18px' }}>Kontakt os for tilbud og tilgængelige datoer.</div>
+            <div style=${{ marginTop:'32px', padding:'28px', border:'1px solid var(--border)' }}>
+              <div className="kicker" style=${{ marginBottom:'10px' }}>A cappella-booking</div>
+              <div className="display" style=${{ fontSize:'24px', marginBottom:'14px' }}>Book hele koret til en a cappella-koncert</div>
+              <div className="italic-meta" style=${{ marginBottom:'18px' }}>Kontakt os for tilbud og tilgængelige datoer.</div>
               <a href="#kontakt" className="btn btn-sm btn-light">Kontakt os</a>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </section>`
   );
 };
 
@@ -1125,58 +1096,63 @@ const Kontakt = () => {
   const [sent, setSent] = React.useState(false);
 
   return (
-    <section id="kontakt" className="section" style={{ background:'var(--section-bg)' }}>
-      <div style={{ maxWidth:'900px', margin:'0 auto', display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'clamp(32px,6vw,80px)' }}>
+    html`<section id="kontakt" className="section" style=${{ background:'var(--section-bg)' }}>
+      <div style=${{ maxWidth:'900px', margin:'0 auto', display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'clamp(32px,6vw,80px)' }}>
         <div>
           <div className="eyebrow">Kontakt</div>
-          <h2 className="display h2" style={{ margin:'14px 0 20px' }}>Skriv til os</h2>
-          <p className="body" style={{ marginBottom:'32px' }}>
+          <h2 className="display h2" style=${{ margin:'14px 0 20px' }}>Skriv til os</h2>
+          <p className="body" style=${{ marginBottom:'32px' }}>
             Ønsker du at booke koret, blive partner, eller har du spørgsmål til vores koncerter — skriv til os.
           </p>
-          <div style={{ marginBottom:'20px' }}>
-            <div className="kicker" style={{ marginBottom:'6px' }}>Email</div>
-            <a href={`mailto:${EMAIL}`} className="italic-meta" style={{ fontSize:'18px', color:'var(--fg)' }}>{EMAIL}</a>
+          <div style=${{ marginBottom:'20px' }}>
+            <div className="kicker" style=${{ marginBottom:'6px' }}>Email</div>
+            <a href=${`mailto:${EMAIL}`} className="italic-meta" style=${{ fontSize:'18px', color:'var(--fg)' }}>${EMAIL}</a>
           </div>
-          <div style={{ marginBottom:'20px' }}>
-            <div className="kicker" style={{ marginBottom:'6px' }}>Sociale medier</div>
-            {SOCIALS.map(s => (
-              <a key={s.label} href={s.url} target="_blank" rel="noopener"
-                className="italic-meta" style={{ fontSize:'17px', color:'var(--fg)', display:'block', marginBottom:'4px' }}>
-                {s.label}
-              </a>
+          <div style=${{ marginBottom:'20px' }}>
+            <div className="kicker" style=${{ marginBottom:'6px' }}>Sociale medier</div>
+            ${SOCIALS.map(s => (
+              html`<a key=${s.label} href=${s.url} target="_blank" rel="noopener"
+                className="italic-meta" style=${{ fontSize:'17px', color:'var(--fg)', display:'block', marginBottom:'4px' }}>
+                ${s.label}
+              </a>`
             ))}
           </div>
         </div>
 
         <div>
-          {sent ? (
-            <div style={{ paddingTop:'48px' }}>
-              <div className="display" style={{ fontSize:'28px', marginBottom:'12px' }}>Tak for din besked</div>
-              <div className="italic-meta" style={{ fontSize:'17px' }}>Vi vender tilbage hurtigst muligt.</div>
-            </div>
+          ${sent ? (
+            html`<div style=${{ paddingTop:'48px' }}>
+              <div className="display" style=${{ fontSize:'28px', marginBottom:'12px' }}>Tak for din besked</div>
+              <div className="italic-meta" style=${{ fontSize:'17px' }}>Din mailapp er åbnet med beskeden — tryk send dér. Vi vender tilbage hurtigst muligt.</div>
+            </div>`
           ) : (
-            <form onSubmit={ev => { ev.preventDefault(); setSent(true); }} style={{ paddingTop:'32px' }}>
-              {[
+            html`<form onSubmit=${ev => {
+              ev.preventDefault();
+              const params = new URLSearchParams({ subject:`Besked fra ${form.navn}`, body:`${form.besked}\n\n${form.navn}\n${form.email}` });
+              window.location.href = `mailto:${EMAIL}?${params.toString().replace(/\+/g, '%20')}`;
+              setSent(true);
+            }} style=${{ paddingTop:'32px' }}>
+              ${[
                 { name:'navn', label:'Navn', type:'text' },
                 { name:'email', label:'Email', type:'email' },
               ].map(f => (
-                <div key={f.name} style={{ marginBottom:'28px' }}>
-                  <div className="kicker" style={{ marginBottom:'8px' }}>{f.label}</div>
-                  <input type={f.type} value={form[f.name]} required className="field"
-                    onChange={ev => setForm({...form, [f.name]: ev.target.value})} />
-                </div>
+                html`<div key=${f.name} style=${{ marginBottom:'28px' }}>
+                  <div className="kicker" style=${{ marginBottom:'8px' }}>${f.label}</div>
+                  <input type=${f.type} value=${form[f.name]} required className="field"
+                    onChange=${ev => setForm({...form, [f.name]: ev.target.value})} />
+                </div>`
               ))}
-              <div style={{ marginBottom:'36px' }}>
-                <div className="kicker" style={{ marginBottom:'8px' }}>Besked</div>
-                <textarea value={form.besked} required rows={5} className="field field-area"
-                  onChange={ev => setForm({...form, besked: ev.target.value})} />
+              <div style=${{ marginBottom:'36px' }}>
+                <div className="kicker" style=${{ marginBottom:'8px' }}>Besked</div>
+                <textarea value=${form.besked} required rows=${5} className="field field-area"
+                  onChange=${ev => setForm({...form, besked: ev.target.value})} />
               </div>
-              <button type="submit" className="btn btn-light" style={{ padding:'14px 40px' }}>Send besked</button>
-            </form>
+              <button type="submit" className="btn btn-light" style=${{ padding:'14px 40px' }}>Send besked</button>
+            </form>`
           )}
         </div>
       </div>
-    </section>
+    </section>`
   );
 };
 
@@ -1250,44 +1226,44 @@ const Footer = () => {
   };
 
   return (
-    <footer style={{ background:'var(--section-bg)', padding:'56px clamp(20px,4vw,48px) 28px', borderTop:'1px solid var(--border)' }}>
+    html`<footer style=${{ background:'var(--section-bg)', padding:'56px clamp(20px,4vw,48px) 28px', borderTop:'1px solid var(--border)' }}>
       <div className="container">
-        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr 1fr', gap: isMobile ? '28px' : '40px', marginBottom:'48px' }}>
+        <div style=${{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr 1fr', gap: isMobile ? '28px' : '40px', marginBottom:'48px' }}>
           <div>
-            <span onClick={triggerTremor} style={{ display:'inline-block', cursor:'default', userSelect:'none' }}>
-              <Logo height={44} marginBottom="16px" />
+            <span onClick=${triggerTremor} style=${{ display:'inline-block', cursor:'default', userSelect:'none' }}>
+              <${Logo} height=${44} marginBottom="16px" />
             </span>
-            <p className="italic-meta" style={{ lineHeight:1.7 }}>
+            <p className="italic-meta" style=${{ lineHeight:1.7 }}>
               Et danskbaseret kammerkor med høj musikalsk ambition og en forkærlighed for nordisk musik.
             </p>
           </div>
           <div>
-            <div className="kicker" style={{ marginBottom:'16px' }}>Navigation</div>
-            {NAV.map(l => (
-              <a key={l.href} href={l.href}
-                style={{ display:'block', fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', color:'var(--fg)', marginBottom:'7px' }}>
-                {l.label}
-              </a>
+            <div className="kicker" style=${{ marginBottom:'16px' }}>Navigation</div>
+            ${NAV.map(l => (
+              html`<a key=${l.href} href=${l.href}
+                style=${{ display:'block', fontFamily:"'EB Garamond',Georgia,serif", fontSize:'16px', color:'var(--fg)', marginBottom:'7px' }}>
+                ${l.label}
+              </a>`
             ))}
           </div>
           <div>
-            <div className="kicker" style={{ marginBottom:'16px' }}>Kontakt</div>
-            <a href={`mailto:${EMAIL}`} className="italic-meta" style={{ fontSize:'16px', color:'var(--fg)', display:'block', marginBottom:'20px' }}>{EMAIL}</a>
-            <div className="tag" style={{ marginBottom:'10px' }}>Følg os</div>
-            {SOCIALS.map(s => (
-              <a key={s.label} href={s.url} target="_blank" rel="noopener"
-                style={{ display:'block', fontFamily:"'EB Garamond',Georgia,serif", fontSize:'15px', color:'var(--fg)', marginBottom:'6px' }}>
-                {s.label}
-              </a>
+            <div className="kicker" style=${{ marginBottom:'16px' }}>Kontakt</div>
+            <a href=${`mailto:${EMAIL}`} className="italic-meta" style=${{ fontSize:'16px', color:'var(--fg)', display:'block', marginBottom:'20px' }}>${EMAIL}</a>
+            <div className="tag" style=${{ marginBottom:'10px' }}>Følg os</div>
+            ${SOCIALS.map(s => (
+              html`<a key=${s.label} href=${s.url} target="_blank" rel="noopener"
+                style=${{ display:'block', fontFamily:"'EB Garamond',Georgia,serif", fontSize:'15px', color:'var(--fg)', marginBottom:'6px' }}>
+                ${s.label}
+              </a>`
             ))}
           </div>
         </div>
-        <div style={{ borderTop:'1px solid var(--border)', paddingTop:'18px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em' }}>© 2025 Kammerkoret Richters Skala</div>
-          <div style={{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em' }}>richtersskala.dk</div>
+        <div style=${{ borderTop:'1px solid var(--border)', paddingTop:'18px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style=${{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em' }}>© ${new Date().getFullYear()} Kammerkoret Richters Skala</div>
+          <div style=${{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.04em' }}>richtersskala.dk</div>
         </div>
       </div>
-    </footer>
+    </footer>`
   );
 };
 
@@ -1301,16 +1277,11 @@ const App = () => {
 
   const cyclePalette = () => setPalette(p => {
     const next = nextPaletteKey(p);
-    localStorage.setItem('krs-theme', next);
+    storage.set('krs-theme', next);
     return next;
   });
 
-  React.useEffect(() => {
-    fetch('concerts.json')
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(data => setEvents(Array.isArray(data) ? data : []))
-      .catch(() => {});
-  }, []);
+  React.useEffect(() => { fetchList('concerts.json').then(setEvents).catch(() => {}); }, []);
 
   React.useEffect(() => { updateEventsJsonLd(events); }, [events]);
 
@@ -1321,27 +1292,27 @@ const App = () => {
   }, []);
 
   return (
-    <ThemeCtx.Provider value={theme}>
-    <LayoutCtx.Provider value={isMobile}>
-    <EventsCtx.Provider value={events}>
-      <div className="app" style={themeVars(theme)}>
-        <Header scrolled={scrolled} paletteKey={palette} cyclePalette={cyclePalette} />
-        <Hero />
-        <Koncertkalender />
-        <Galleri />
-        <Optagelser />
-        <OmKoret />
-        <StøtOs />
-        <Kontakt />
-        <Footer />
+    html`<${ThemeCtx.Provider} value=${theme}>
+    <${LayoutCtx.Provider} value=${isMobile}>
+    <${EventsCtx.Provider} value=${events}>
+      <div className="app" style=${themeVars(theme)}>
+        <${Header} scrolled=${scrolled} paletteKey=${palette} cyclePalette=${cyclePalette} />
+        <${Hero} />
+        <${Koncertkalender} />
+        <${Galleri} />
+        <${Optagelser} />
+        <${OmKoret} />
+        <${StøtOs} />
+        <${Kontakt} />
+        <${Footer} />
       </div>
-    </EventsCtx.Provider>
-    </LayoutCtx.Provider>
-    </ThemeCtx.Provider>
+    <//>
+    <//>
+    <//>`
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
