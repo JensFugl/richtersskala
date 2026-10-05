@@ -3,7 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kammerkoret Richters Skala</title>
+<title>Kammerkoret Richters Skala – kammerkor i København | Koncerter</title>
+<meta name="description" content="Kammerkoret Richters Skala er et kammerkor i København med 25 sangere og særlig forkærlighed for nordisk kormusik. Se kommende koncerter, hør optagelser og book koret.">
+<link rel="canonical" href="https://richtersskala.dk/">
+<meta name="theme-color" content="#0d0d0b">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kammerkoret Richters Skala">
+<meta property="og:locale" content="da_DK">
+<meta property="og:url" content="https://richtersskala.dk/">
+<meta property="og:title" content="Kammerkoret Richters Skala – kammerkor i København">
+<meta property="og:description" content="Kammerkoret Richters Skala er et kammerkor i København med 25 sangere og særlig forkærlighed for nordisk kormusik. Se kommende koncerter, hør optagelser og book koret.">
+<meta property="og:image" content="https://richtersskala.dk/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Kammerkoret Richters Skala synger med dirigent foran publikum">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MusicGroup",
+  "@id": "https://richtersskala.dk/#kor",
+  "name": "Kammerkoret Richters Skala",
+  "alternateName": "Richters Skala",
+  "description": "Kammerkoret Richters Skala er et kammerkor i København med 25 sangere og særlig forkærlighed for nordisk kormusik. Se kommende koncerter, hør optagelser og book koret.",
+  "url": "https://richtersskala.dk/",
+  "logo": "https://richtersskala.dk/assets/KRS-logo.jpg",
+  "image": "https://richtersskala.dk/assets/og-image.jpg",
+  "email": "richtersskala@gmail.com",
+  "genre": ["Kormusik", "Klassisk musik", "Nordisk kormusik"],
+  "location": { "@type": "Place", "name": "København", "address": { "@type": "PostalAddress", "addressLocality": "København", "addressCountry": "DK" } },
+  "member": { "@type": "OrganizationRole", "roleName": "Dirigent", "member": { "@type": "Person", "name": "Laus Richter Larsen" } },
+  "sameAs": [
+    "https://www.instagram.com/richters_skala/",
+    "https://www.facebook.com/profile.php?id=61556245828049"
+  ]
+}
+</script>
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,6 +54,8 @@
   button { cursor: pointer; background: none; border: none; color: inherit; font: inherit; padding: 0; }
   a { text-decoration: none; color: inherit; transition: opacity 150ms ease-out; }
   a:hover { opacity: 0.6; }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
   .app { background: var(--bg); color: var(--fg); transition: background 300ms; }
 
@@ -82,19 +119,31 @@
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+  <!-- Statisk indhold til søgemaskiner og link-forhåndsvisninger, der ikke kører JavaScript. React erstatter det ved indlæsning. -->
+  <div class="sr-only">
+    <h1>Kammerkoret Richters Skala – kammerkor i København</h1>
+    <p>Kammerkoret Richters Skala er et dansk SATB-kammerkor på 25 sangere med solistisk ansvar og høj musikalsk ambition. Koret specialiserer sig i et bredt repertoire med særlig forkærlighed for nordisk musik.</p>
+    <h2>Dirigent Laus Richter Larsen</h2>
+    <p>Koret er grundlagt og ledes af Laus Richter Larsen, uddannet kordirigent, sanger og sangpædagog fra Det Kongelige Danske Musikkonservatorium og Kungliga Musikhögskolan i Stockholm.</p>
+    <h2>Koncerter</h2>
+    <p>Se kommende koncerter, køb billetter og hør optagelser på richtersskala.dk.</p>
+    <h2>Kontakt og booking</h2>
+    <p>Skriv til os på <a href="mailto:richtersskala@gmail.com">richtersskala@gmail.com</a>. Følg koret på <a href="https://www.instagram.com/richters_skala/">Instagram</a> og <a href="https://www.facebook.com/profile.php?id=61556245828049">Facebook</a>.</p>
+  </div>
+</div>
 <script type="text/babel">
 
 /* ─── DATA ─────────────────────────────────────────────── */
 
 const PHOTOS = [
-  { src:'assets/photo-choir-museum.jpg',  caption:'Emmaus, 2024' },
-  { src:'assets/photo-singers-dark.jpg',  caption:'Emmaus, 2024' },
-  { src:'assets/photo-conductor.jpg',     caption:'Dirigent Laus Richter Larsen' },
-  { src:'assets/photo-choir-church.jpg',  caption:' 2023' },
-  { src:'assets/photo-choir-full.jpg',    caption:' 2024' },
-  { src:'assets/photo-choir-singing.jpg', caption:'2023' },
-  { src:'assets/photo-candles.jpg',       caption:'Julekoncert, 2024' },
+  { src:'assets/photo-choir-museum.jpg',  caption:'Emmaus, 2024', alt:'Kammerkoret Richters Skala og dirigenten i koncertsal med skulptur' },
+  { src:'assets/photo-singers-dark.jpg',  caption:'Emmaus, 2024', alt:'Korsangere synger med lys på nodemapperne' },
+  { src:'assets/photo-conductor.jpg',     caption:'Dirigent Laus Richter Larsen', alt:'Dirigent Laus Richter Larsen dirigerer koret' },
+  { src:'assets/photo-choir-church.jpg',  caption:' 2023', alt:'Korets herrestemmer synger tæt på publikum' },
+  { src:'assets/photo-choir-full.jpg',    caption:' 2024', alt:'Hele koret synger med dirigent foran publikum' },
+  { src:'assets/photo-choir-singing.jpg', caption:'2023', alt:'Koret synger i hvid kirke med lysekrone' },
+  { src:'assets/photo-candles.jpg',       caption:'Julekoncert, 2024', alt:'Korsangere synger ved levende lys til julekoncert' },
 ];
 
 const SPONSORS = [
@@ -205,6 +254,61 @@ function downloadICS(ev) {
   const url = URL.createObjectURL(blob);
   Object.assign(document.createElement('a'), { href:url, download:`koncert-${ev.id}.ics` }).click();
   URL.revokeObjectURL(url);
+}
+
+/* ─── STRUCTURED DATA (SEO) ─────────────────────────────── */
+const SITE_URL = 'https://richtersskala.dk/';
+
+function toISODate({ year, month, day }) {
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+
+function eventJsonLd(ev) {
+  const start = parseDanishDate(ev.date);
+  const hasTime = /^\d{1,2}:\d{2}$/.test(ev.time || '');
+  const [street, ...rest] = (ev.address || '').split(',').map(x => x.trim());
+  const [, postalCode, locality] = (rest.join(', ').match(/^(\d{4})\s+(.+)$/) || []);
+  const price = parseInt(ev.price, 10);
+  return {
+    '@type': 'MusicEvent',
+    name: `${ev.title} – Kammerkoret Richters Skala`,
+    startDate: hasTime ? `${toISODate(start)}T${ev.time.padStart(5,'0')}:00` : toISODate(start),
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    ...(ev.description && { description: ev.description }),
+    image: `${SITE_URL}assets/og-image.jpg`,
+    url: ev.eventLink || `${SITE_URL}#koncerter`,
+    location: {
+      '@type': 'Place',
+      name: ev.venue,
+      address: {
+        '@type': 'PostalAddress',
+        ...(street && { streetAddress: street }),
+        ...(postalCode && { postalCode, addressLocality: locality }),
+        addressCountry: 'DK',
+      },
+    },
+    performer: { '@id': `${SITE_URL}#kor` },
+    organizer: { '@id': `${SITE_URL}#kor` },
+    ...(isFinite(price) && { offers: {
+      '@type': 'Offer',
+      price,
+      priceCurrency: 'DKK',
+      url: ev.ticketLink || `${SITE_URL}#koncerter`,
+      availability: ev.soldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
+    } }),
+  };
+}
+
+function updateEventsJsonLd(events) {
+  const now = new Date();
+  const upcoming = events.filter(ev => { try { return eventEndDate(ev) > now; } catch { return false; } });
+  let tag = document.getElementById('events-jsonld');
+  if (!tag) {
+    tag = Object.assign(document.createElement('script'), { id:'events-jsonld', type:'application/ld+json' });
+    document.head.appendChild(tag);
+  }
+  tag.textContent = JSON.stringify({ '@context':'https://schema.org', '@graph': upcoming.map(eventJsonLd) });
 }
 
 /* ─── THEME ────────────────────────────────────────────── */
@@ -450,15 +554,16 @@ const Hero = () => {
 
   return (
     <section id="top" style={{ position:'relative', width:'100%', height:'100vh', overflow:'hidden', display:'flex', alignItems:'flex-end' }}>
-      <img src="assets/photo-choir-museum.jpg" alt=""
+      <img src="assets/photo-choir-museum.jpg" alt="Kammerkoret Richters Skala synger i koncertsal" fetchpriority="high"
         style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', filter:'brightness(var(--hero-brightness))', transform:`translate3d(0, ${parallaxY}px, 0)`, willChange:'transform' }} />
       <div style={{ position:'absolute', inset:0, background:'var(--hero-overlay)' }}></div>
 
       <div style={{ position:'relative', zIndex:2, padding:'0 clamp(20px,4vw,64px) clamp(48px,7vh,96px)', maxWidth:'900px' }}>
+        <h1 className="sr-only">Kammerkoret Richters Skala – kammerkor i København</h1>
         <div className="eyebrow">{next ? 'Næste koncert' : 'Kammerkoret Richters Skala'}</div>
-        <h1 className="display" style={{ fontSize:'clamp(3rem,6vw,5.8rem)', lineHeight:1.02, color:'#f7f5f0', margin:'16px 0 18px' }}>
+        <h2 className="display" style={{ fontSize:'clamp(3rem,6vw,5.8rem)', lineHeight:1.02, color:'#f7f5f0', margin:'16px 0 18px' }}>
           {next ? next.title : 'Kommende koncerter'}
-        </h1>
+        </h2>
         <p style={{ fontFamily:"'EB Garamond',Georgia,serif", fontSize:'clamp(17px,1.6vw,21px)', fontStyle:'italic', lineHeight:1.65, color:'rgba(247,245,240,0.68)', marginBottom:countdown ? '20px' : '40px', maxWidth:'520px' }}>
           {next ? <>{next.date}{next.time && next.time !== 'TBA' ? `, kl. ${next.time}` : ''}<br />{next.venue}</> : null}
         </p>
@@ -653,7 +758,7 @@ const Galleri = () => {
           return (
             <div key={i} onClick={() => setLightbox(i)} className="gallery-cell"
               style={{ aspectRatio: wide ? '16/9' : '4/3', gridColumn: wide ? 'span 2' : 'span 1' }}>
-              <img src={p.src} alt={p.caption} loading="lazy" decoding="async" />
+              <img src={p.src} alt={p.alt} loading="lazy" decoding="async" />
               <div className="caption">{p.caption}</div>
             </div>
           );
@@ -665,7 +770,7 @@ const Galleri = () => {
           position:'fixed', inset:0, zIndex:500, background:'rgba(13,13,11,0.95)',
           display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out',
         }}>
-          <img src={PHOTOS[lightbox].src} alt="" style={{ maxWidth:'90vw', maxHeight:'88vh', objectFit:'contain' }} />
+          <img src={PHOTOS[lightbox].src} alt={PHOTOS[lightbox].alt} style={{ maxWidth:'90vw', maxHeight:'88vh', objectFit:'contain' }} />
           <div style={{ position:'absolute', bottom:'32px', left:'50%', transform:'translateX(-50%)',
             fontFamily:"'EB Garamond',Georgia,serif", fontSize:'15px', fontStyle:'italic', color:'rgba(247,245,240,0.6)' }}>
             {PHOTOS[lightbox].caption}
@@ -1206,6 +1311,8 @@ const App = () => {
       .then(data => setEvents(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
+
+  React.useEffect(() => { updateEventsJsonLd(events); }, [events]);
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);

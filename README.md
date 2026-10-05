@@ -10,7 +10,7 @@
 ## Eget domæne (richtersskala.dk hos one.com)
 
 Filen `CNAME` i roden fortæller GitHub Pages, hvilket domæne siden serveres
-på (www.richtersskala.dk — GitHub omdirigerer selv richtersskala.dk dertil).
+på (richtersskala.dk — GitHub omdirigerer selv www.richtersskala.dk dertil).
 Derudover skal DNS hos one.com pege på GitHub:
 
 1. Log ind på one.com → Domæner → richtersskala.dk → **DNS-indstillinger**
@@ -30,4 +30,13 @@ Derudover skal DNS hos one.com pege på GitHub:
 - index.html — hjemmesiden (single-file React app)
 - concerts.json — koncertdata synkroniseret fra Google Sheets
 - recordings.json, videos.json — afspilningsdata hentet ved load
-- assets/ — billeder og logo
+- assets/ — billeder og logo (fotos er nedskaleret til maks. 2400 px; komprimér nye
+  billeder tilsvarende, så siden loader hurtigt)
+- robots.txt, sitemap.xml — til søgemaskiner
+
+## SEO
+
+Titel, beskrivelse, delings-billede (Open Graph) og struktureret data om koret
+ligger i `<head>` i index.html. Struktureret data for koncerterne (MusicEvent)
+genereres automatisk ud fra concerts.json, så de kan vises i Googles
+koncert-/begivenhedsresultater.
