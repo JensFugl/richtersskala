@@ -27,7 +27,20 @@ Derudover skal DNS hos one.com pege på GitHub:
 
 ## Struktur
 
-- index.html — hjemmesiden (single-file React app)
+- index.html — hjemmesiden (single-file React app). Markup skrives med
+  [htm](https://github.com/developit/htm), der ligner JSX men kører direkte i
+  browseren uden kompilering: brug `${...}` i stedet for `{...}`, og
+  `<${Komponent}>…<//>` for egne komponenter
 - concerts.json — koncertdata synkroniseret fra Google Sheets
 - recordings.json, videos.json — afspilningsdata hentet ved load
-- assets/ — billeder og logo
+- assets/ — billeder og logo. Hvert foto findes i to størrelser: `navn.jpg`
+  (maks. 2400 px bred) og `navn-1200.jpg` (1200 px bred, til mobil og
+  galleri-miniaturer). Nye fotos skal også have begge udgaver
+- robots.txt, sitemap.xml — til søgemaskiner
+
+## SEO
+
+Titel, beskrivelse, delings-billede (Open Graph) og struktureret data om koret
+ligger i `<head>` i index.html. Struktureret data for koncerterne (MusicEvent)
+genereres automatisk ud fra concerts.json, så de kan vises i Googles
+koncert-/begivenhedsresultater.
