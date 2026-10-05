@@ -194,7 +194,7 @@ function downloadICS(ev) {
     'BEGIN:VCALENDAR', 'VERSION:2.0',
     'PRODID:-//Kammerkoret Richters Skala//DA',
     'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
-    `UID:event-${ev.id}-${dtStart}@richtersskala.dk`,
+    `UID:event-${ev.id}-${dtStart}-richtersskala@gmail.com`,
     `DTSTAMP:${new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)}Z`,
     `DTSTART;VALUE=DATE:${dtStart}`, `DTEND;VALUE=DATE:${dtEnd}`,
     `SUMMARY:${ev.title} – Kammerkoret Richters Skala`,
