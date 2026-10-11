@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kammerkoret Richters Skala – kammerkor i København | Koncerter</title>
 <meta name="description" content="Kammerkoret Richters Skala er et kammerkor i København med 25 sangere og særlig forkærlighed for nordisk kormusik. Se kommende koncerter, hør optagelser og book koret.">
-<link rel="canonical" href="https://richtersskala.dk/">
+<link rel="canonical" href="https://www.richtersskala.dk/">
 <meta name="theme-color" content="#0d0d0b">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kammerkoret Richters Skala">
 <meta property="og:locale" content="da_DK">
-<meta property="og:url" content="https://richtersskala.dk/">
+<meta property="og:url" content="https://www.richtersskala.dk/">
 <meta property="og:title" content="Kammerkoret Richters Skala – kammerkor i København">
 <meta property="og:description" content="Kammerkoret Richters Skala er et kammerkor i København med 25 sangere og særlig forkærlighed for nordisk kormusik. Se kommende koncerter, hør optagelser og book koret.">
-<meta property="og:image" content="https://richtersskala.dk/assets/og-image.jpg">
+<meta property="og:image" content="https://www.richtersskala.dk/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Kammerkoret Richters Skala synger med dirigent foran publikum">
@@ -21,21 +21,34 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "MusicGroup",
-  "@id": "https://richtersskala.dk/#kor",
-  "name": "Kammerkoret Richters Skala",
-  "alternateName": "Richters Skala",
-  "description": "Kammerkoret Richters Skala er et kammerkor i København med 25 sangere og særlig forkærlighed for nordisk kormusik. Se kommende koncerter, hør optagelser og book koret.",
-  "url": "https://richtersskala.dk/",
-  "logo": "https://richtersskala.dk/assets/KRS-logo.jpg",
-  "image": "https://richtersskala.dk/assets/og-image.jpg",
-  "email": "richtersskala@gmail.com",
-  "genre": ["Kormusik", "Klassisk musik", "Nordisk kormusik"],
-  "location": { "@type": "Place", "name": "København", "address": { "@type": "PostalAddress", "addressLocality": "København", "addressCountry": "DK" } },
-  "member": { "@type": "OrganizationRole", "roleName": "Dirigent", "member": { "@type": "Person", "name": "Laus Richter Larsen" } },
-  "sameAs": [
-    "https://www.instagram.com/richters_skala/",
-    "https://www.facebook.com/profile.php?id=61556245828049"
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://www.richtersskala.dk/#website",
+      "name": "Richters Skala",
+      "alternateName": ["Kammerkoret Richters Skala", "richtersskala.dk"],
+      "url": "https://www.richtersskala.dk/",
+      "inLanguage": "da",
+      "publisher": { "@id": "https://www.richtersskala.dk/#kor" }
+    },
+    {
+      "@type": "MusicGroup",
+      "@id": "https://www.richtersskala.dk/#kor",
+      "name": "Kammerkoret Richters Skala",
+      "alternateName": "Richters Skala",
+      "description": "Kammerkoret Richters Skala er et kammerkor i København med 25 sangere og særlig forkærlighed for nordisk kormusik. Se kommende koncerter, hør optagelser og book koret.",
+      "url": "https://www.richtersskala.dk/",
+      "logo": "https://www.richtersskala.dk/assets/KRS-logo.jpg",
+      "image": "https://www.richtersskala.dk/assets/og-image.jpg",
+      "email": "richtersskala@gmail.com",
+      "genre": ["Kormusik", "Klassisk musik", "Nordisk kormusik"],
+      "location": { "@type": "Place", "name": "København", "address": { "@type": "PostalAddress", "addressLocality": "København", "addressCountry": "DK" } },
+      "member": { "@type": "OrganizationRole", "roleName": "Dirigent", "member": { "@type": "Person", "name": "Laus Richter Larsen" } },
+      "sameAs": [
+        "https://www.instagram.com/richters_skala/",
+        "https://www.facebook.com/profile.php?id=61556245828049"
+      ]
+    }
   ]
 }
 </script>
@@ -259,7 +272,7 @@ function downloadICS(ev) {
 }
 
 /* ─── STRUCTURED DATA (SEO) ─────────────────────────────── */
-const SITE_URL = 'https://richtersskala.dk/';
+const SITE_URL = 'https://www.richtersskala.dk/';
 
 function eventJsonLd(ev) {
   const { day, month, year } = parseDanishDate(ev.date);
