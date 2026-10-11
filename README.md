@@ -33,6 +33,8 @@ Derudover skal DNS hos one.com pege på GitHub:
   `<${Komponent}>…<//>` for egne komponenter
 - concerts.json — koncertdata synkroniseret fra Google Sheets
 - recordings.json, videos.json — afspilningsdata hentet ved load
+- assets/vendor/ — React 18.3.1, ReactDOM 18.3.1 og htm 3.1.1, kopieret uændret
+  fra npm og serveret fra siden selv, så den ikke afhænger af et eksternt CDN
 - assets/ — billeder og logo. Hvert foto findes i to størrelser: `navn.jpg`
   (maks. 2400 px bred) og `navn-1200.jpg` (1200 px bred, til mobil og
   galleri-miniaturer). Nye fotos skal også have begge udgaver

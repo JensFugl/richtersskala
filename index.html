@@ -58,9 +58,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=EB+Garamond:ital@0;1&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
-<script defer src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
-<script defer src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
-<script defer src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js" integrity="sha384-toVdrLSMaw7Y55MowcKqkmFL/Ek6Sky62NOk0b5sDDZBu2wcoPyyQUt9unDVjXhL" crossorigin="anonymous"></script>
+<script defer src="assets/vendor/react-18.3.1.production.min.js"></script>
+<script defer src="assets/vendor/react-dom-18.3.1.production.min.js"></script>
+<script defer src="assets/vendor/htm-3.1.1.umd.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -79,7 +79,7 @@
   .eyebrow { font-size: 10px; letter-spacing: 0.14em; color: var(--fg-muted); }
   .tag     { font-size: 9px;  letter-spacing: 0.10em; color: var(--fg-muted); }
   .kicker  { font-size: 9px;  letter-spacing: 0.12em; color: var(--fg-muted); }
-  .nav-link { font-size: 10px; letter-spacing: 0.12em; color: var(--fg); opacity: 0.7; }
+  .nav-link { font-size: 10px; letter-spacing: 0.12em; color: inherit; opacity: 0.7; }
 
   .display { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300; letter-spacing: -0.01em; line-height: 1.05; color: var(--fg); }
   .h2 { font-size: clamp(2rem, 3.5vw, 3rem); }
@@ -210,10 +210,22 @@ function lastDayOf(ev, fallback) {
   return m ? parseInt(m[1],10) : fallback;
 }
 
+// Times in concerts.json are Danish local time; this gives the real instant, so countdowns
+// and calendar entries are right whatever time zone the visitor's device is set to
+function copenhagenTime(year, month, day, h, m) {
+  const asUtc = Date.UTC(year, month - 1, day, h, m);
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone:'Europe/Copenhagen', hourCycle:'h23',
+    year:'numeric', month:'numeric', day:'numeric', hour:'numeric', minute:'numeric' }).formatToParts(asUtc).map(x => [x.type, x.value]));
+  const offset = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - asUtc;
+  return new Date(asUtc - offset);
+}
+
+const hasTime = ev => /^\d{1,2}:\d{2}$/.test(ev.time || '');
+
 function eventStartDate(ev) {
   const { day, month, year } = parseDanishDate(ev.date);
   const [h, m] = (ev.time || '').split(':').map(n => parseInt(n,10));
-  return new Date(year, month - 1, day, isFinite(h) ? h : 19, isFinite(m) ? m : 30);
+  return copenhagenTime(year, month, day, isFinite(h) ? h : 19, isFinite(m) ? m : 30);
 }
 
 // Exclusive end: midnight after the last day
@@ -236,10 +248,21 @@ function formatCountdown(target, now) {
 const ymd = (d, sep = '') =>
   [d.getFullYear(), String(d.getMonth() + 1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join(sep);
 
+const utcStamp = d => d.toISOString().replace(/[-:]|\.\d{3}/g, '');
+
+// concerts.json has no end time, so timed calendar entries assume this length
+const CONCERT_HOURS = 2;
+
+// All-day entries when the time is TBA or the event spans several days
 function eventDates(ev) {
   const { day, month, year } = parseDanishDate(ev.date);
-  return { dtStart: ymd(new Date(year, month - 1, day)), dtEnd: ymd(eventEndDate(ev)) };
+  if (!hasTime(ev) || lastDayOf(ev, day) !== day)
+    return { allDay: true, dtStart: ymd(new Date(year, month - 1, day)), dtEnd: ymd(eventEndDate(ev)) };
+  const start = eventStartDate(ev);
+  return { allDay: false, dtStart: utcStamp(start), dtEnd: utcStamp(new Date(start.getTime() + CONCERT_HOURS * 3600e3)) };
 }
+
+const eventLocation = ev => [ev.venue, ev.address].filter(Boolean).join(', ');
 
 function openGoogleCalendar(ev) {
   const { dtStart, dtEnd } = eventDates(ev);
@@ -247,22 +270,26 @@ function openGoogleCalendar(ev) {
     action: 'TEMPLATE',
     text: `${ev.title} – Kammerkoret Richters Skala`,
     dates: `${dtStart}/${dtEnd}`,
-    ...(ev.venue && { location: ev.venue }),
+    ...(ev.venue && { location: eventLocation(ev) }),
   });
   window.open(`https://calendar.google.com/calendar/render?${params}`, '_blank');
 }
 
+// RFC 5545 text values need backslash, semicolon and comma escaped
+const icsText = s => s.replace(/[\\;,]/g, c => '\\' + c);
+
 function downloadICS(ev) {
-  const { dtStart, dtEnd } = eventDates(ev);
+  const { allDay, dtStart, dtEnd } = eventDates(ev);
+  const dateParam = allDay ? ';VALUE=DATE' : '';
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0',
     'PRODID:-//Kammerkoret Richters Skala//DA',
     'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
-    `UID:event-${ev.id}-${dtStart}-richtersskala@gmail.com`,
-    `DTSTAMP:${new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)}Z`,
-    `DTSTART;VALUE=DATE:${dtStart}`, `DTEND;VALUE=DATE:${dtEnd}`,
-    `SUMMARY:${ev.title} – Kammerkoret Richters Skala`,
-    ...(ev.venue ? [`LOCATION:${ev.venue}${ev.address ? ', ' + ev.address : ''}`] : []),
+    `UID:event-${ev.id}-${dtStart.slice(0,8)}-richtersskala@gmail.com`,
+    `DTSTAMP:${utcStamp(new Date())}`,
+    `DTSTART${dateParam}:${dtStart}`, `DTEND${dateParam}:${dtEnd}`,
+    `SUMMARY:${icsText(`${ev.title} – Kammerkoret Richters Skala`)}`,
+    ...(ev.venue ? [`LOCATION:${icsText(eventLocation(ev))}`] : []),
     'END:VEVENT', 'END:VCALENDAR',
   ];
   const blob = new Blob([lines.join('\r\n')], { type:'text/calendar;charset=utf-8' });
@@ -274,17 +301,18 @@ function downloadICS(ev) {
 /* ─── STRUCTURED DATA (SEO) ─────────────────────────────── */
 const SITE_URL = 'https://www.richtersskala.dk/';
 
+const CHOIR_JSONLD = { '@type': 'MusicGroup', '@id': `${SITE_URL}#kor`, name: 'Kammerkoret Richters Skala', url: SITE_URL };
+
 function eventJsonLd(ev) {
   const { day, month, year } = parseDanishDate(ev.date);
   const date = ymd(new Date(year, month - 1, day), '-');
-  const hasTime = /^\d{1,2}:\d{2}$/.test(ev.time || '');
   const [street, ...rest] = (ev.address || '').split(',').map(x => x.trim());
   const [, postalCode, locality] = (rest.join(', ').match(/^(\d{4})\s+(.+)$/) || []);
   const price = parseInt(ev.price, 10);
   return {
     '@type': 'MusicEvent',
     name: `${ev.title} – Kammerkoret Richters Skala`,
-    startDate: hasTime ? `${date}T${ev.time.padStart(5,'0')}:00` : date,
+    startDate: hasTime(ev) ? eventStartDate(ev).toISOString().replace('.000Z', 'Z') : date,
     eventStatus: 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     ...(ev.description && { description: ev.description }),
@@ -300,8 +328,8 @@ function eventJsonLd(ev) {
         addressCountry: 'DK',
       },
     },
-    performer: { '@id': `${SITE_URL}#kor` },
-    organizer: { '@id': `${SITE_URL}#kor` },
+    performer: CHOIR_JSONLD,
+    organizer: CHOIR_JSONLD,
     ...(isFinite(price) && { offers: {
       '@type': 'Offer',
       price,
@@ -411,6 +439,12 @@ const useJsonList = (url) => {
   return state;
 };
 
+// Props for a clickable non-button element, so it also works from the keyboard (Tab + Enter/Space)
+const pressable = onPress => ({
+  role: 'button', tabIndex: 0, onClick: onPress,
+  onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPress(); } },
+});
+
 // Keyboard handling for lightboxes, active only while `active` is true
 const useKeys = (active, handlers) => {
   const ref = React.useRef(handlers);
@@ -468,14 +502,16 @@ const Header = ({ scrolled, paletteKey, cyclePalette }) => {
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'14px clamp(20px,4vw,48px)',
         background: showBg ? 'var(--header-bg)' : 'transparent',
+        // Light text while the header is transparent over the dark hero photo
+        color: showBg ? 'var(--fg)' : '#f7f5f0',
         backdropFilter: showBg ? 'blur(12px)' : 'none',
         borderBottom: `1px solid ${showBg ? 'var(--header-border)' : 'transparent'}`,
-        transition: 'background 350ms ease-out, border-color 350ms ease-out',
+        transition: 'background 350ms ease-out, border-color 350ms ease-out, color 350ms ease-out',
       }}>
         <a href="#top" onClick=${() => setMenuOpen(false)}><${Logo} /></a>
 
         ${isMobile ? (
-          html`<button onClick=${() => setMenuOpen(o => !o)} aria-label="Menu" style=${{ padding:'8px', display:'flex', flexDirection:'column', gap:'5px' }}>
+          html`<button onClick=${() => setMenuOpen(o => !o)} aria-label="Menu" aria-expanded=${menuOpen} style=${{ padding:'8px', display:'flex', flexDirection:'column', gap:'5px' }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               ${menuOpen
                 ? html`<line x1="3" y1="3" x2="17" y2="17"/><line x1="17" y1="3" x2="3" y2="17"/>`
@@ -551,9 +587,14 @@ const Countdown = ({ target }) => {
   );
 };
 
+const HERO_BTN_LIGHT = { background:'#f7f5f0', color:'#0d0d0b' };
+const HERO_BTN_OUTLINE = { background:'transparent', color:'#f7f5f0', border:'1px solid rgba(247,245,240,0.35)' };
+
 const Hero = () => {
   const events = React.useContext(EventsCtx);
-  const next = React.useMemo(() => events.find(e => isUpcoming(e)) || null, [events]);
+  // concerts.json isn't guaranteed to be in date order
+  const next = React.useMemo(() => events.filter(e => isUpcoming(e))
+    .sort((a, b) => eventStartDate(a) - eventStartDate(b))[0] || null, [events]);
   const imgRef = React.useRef(null);
 
   // Parallax: move the image directly instead of re-rendering on every scroll frame
@@ -591,8 +632,8 @@ const Hero = () => {
         </p>
         ${next && html`<${Countdown} target=${eventStartDate(next)} />`}
         <div style=${{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
-          <a href="#koncerter" className="btn" style=${{ background:'#f7f5f0', color:'#0d0d0b' }}>Køb billetter</a>
-          <a href="#koncerter" className="btn" style=${{ background:'transparent', color:'#f7f5f0', border:'1px solid rgba(247,245,240,0.35)' }}>Se alle koncerter</a>
+          ${next?.ticketLink && html`<a href=${next.ticketLink} target="_blank" rel="noopener noreferrer" className="btn" style=${HERO_BTN_LIGHT}>Køb billetter</a>`}
+          <a href="#koncerter" className="btn" style=${next?.ticketLink ? HERO_BTN_OUTLINE : HERO_BTN_LIGHT}>Se alle koncerter</a>
         </div>
       </div>
 
@@ -606,12 +647,15 @@ const Hero = () => {
 };
 
 /* ─── KONCERTKALENDER ──────────────────────────────────── */
+// "75" → "75 kr."; free-text prices like "50 kr + kulturuge pas" are shown as written
+const formatPrice = p => /^\d+$/.test(p) ? `${p} kr.` : p;
+
 const ConcertRow = ({ e, i, isPast, expanded, setExpanded, calMenu, setCalMenu }) => {
   const isMobile = React.useContext(LayoutCtx);
   return (
     html`<div>
       <div
-        onClick=${() => setExpanded(expanded === e.id ? null : e.id)}
+        ...${pressable(() => setExpanded(expanded === e.id ? null : e.id))} aria-expanded=${expanded === e.id}
         className="concert-row"
         style=${{
           display:'grid', gridTemplateColumns:'72px 1fr auto', gap:'0 28px',
@@ -631,7 +675,7 @@ const ConcertRow = ({ e, i, isPast, expanded, setExpanded, calMenu, setCalMenu }
         <div style=${{ textAlign:'right' }}>
           <div style=${{ fontFamily:"'Outfit',system-ui,sans-serif", fontSize:'13px', color:'var(--fg-muted)' }}>${!isPast && e.time !== 'TBA' ? e.time : ''}</div>
           <div className="tag" style=${{ color: isPast || e.soldOut ? 'var(--fg-muted)' : 'var(--accent)', marginTop:'6px' }}>
-            ${isPast ? 'Afholdt' : e.soldOut ? 'Udsolgt' : 'Billetter'}
+            ${isPast ? 'Afholdt' : e.soldOut ? 'Udsolgt' : e.ticketLink ? 'Billetter' : 'Læs mere'}
           </div>
         </div>
       </div>
@@ -643,7 +687,8 @@ const ConcertRow = ({ e, i, isPast, expanded, setExpanded, calMenu, setCalMenu }
               html`<div className="body" style=${{ marginBottom:'16px' }}>${e.description}</div>`
             )}
             <div style=${{ display:'flex', flexWrap:'wrap', gap:'24px 36px', marginTop:'8px' }}>
-              ${[['Dato', e.date], ['Kl.', e.time !== 'TBA' ? e.time : '—'], ['Sted', e.venue], ...(e.address ? [['Adresse', e.address]] : [])].map(([k,v]) => (
+              ${[['Dato', e.date], ['Kl.', e.time !== 'TBA' ? e.time : '—'], ['Sted', e.venue], ...(e.address ? [['Adresse', e.address]] : []),
+                ...(!isPast && e.price && e.price !== 'TBA' ? [['Pris', formatPrice(e.price)]] : [])].map(([k,v]) => (
                 html`<div key=${k}>
                   <div className="tag" style=${{ marginBottom:'4px' }}>${k}</div>
                   <div className="italic-meta" style=${{ color:'var(--fg)' }}>${v}</div>
@@ -653,15 +698,11 @@ const ConcertRow = ({ e, i, isPast, expanded, setExpanded, calMenu, setCalMenu }
           </div>
           ${!isPast && (
             html`<div style=${{ minWidth:'160px' }}>
-              ${!e.soldOut ? (
-                e.ticketLink ? (
-                  html`<a href=${e.ticketLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light"
-                    style=${{ display:'block', width:'100%', padding:'12px', marginBottom:'8px', textAlign:'center' }}>Køb billetter</a>`
-                ) : (
-                  html`<button className="btn btn-sm btn-light" style=${{ width:'100%', padding:'12px', marginBottom:'8px' }}>Køb billetter</button>`
-                )
-              ) : (
+              ${e.soldOut ? (
                 html`<div className="kicker" style=${{ padding:'12px', textAlign:'center', border:'1px solid var(--border)', marginBottom:'8px' }}>Udsolgt</div>`
+              ) : e.ticketLink && (
+                html`<a href=${e.ticketLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light"
+                  style=${{ display:'block', width:'100%', padding:'12px', marginBottom:'8px', textAlign:'center' }}>Køb billetter</a>`
               )}
               <div style=${{ position:'relative' }}>
                 <button onClick=${() => setCalMenu(calMenu === e.id ? null : e.id)}
@@ -710,10 +751,10 @@ const Koncertkalender = () => {
       <div className="container">
         <div style=${{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'40px', paddingBottom:'20px', borderBottom:'1px solid var(--border)' }}>
           <div>
-            <div className="eyebrow">Sæson 2026</div>
+            <div className="eyebrow">Sæson ${upcoming.length ? parseDanishDate(upcoming[0].date).year : new Date().getFullYear()}</div>
             <h2 className="display h2" style=${{ marginTop:'10px' }}>Kommende koncerter</h2>
           </div>
-          <div className="italic-meta">${upcoming.length} koncerter</div>
+          <div className="italic-meta">${upcoming.length} ${upcoming.length === 1 ? 'koncert' : 'koncerter'}</div>
         </div>
 
         ${upcoming.length === 0 && (
@@ -769,7 +810,7 @@ const Galleri = () => {
         ${PHOTOS.map((p, i) => {
           const wide = !isMobile && (i === 0 || i === 4);
           return (
-            html`<div key=${i} onClick=${() => setLightbox(i)} className="gallery-cell"
+            html`<div key=${i} ...${pressable(() => setLightbox(i))} className="gallery-cell"
               style=${{ aspectRatio: wide ? '16/9' : '4/3', gridColumn: wide ? 'span 2' : 'span 1' }}>
               <img src=${p.src} srcSet=${srcSet(p.src)} sizes=${isMobile ? '50vw' : wide ? '50vw' : '25vw'} alt=${p.alt} loading="lazy" decoding="async" />
               <div className="caption">${p.caption}</div>
@@ -938,7 +979,7 @@ const Optagelser = () => {
           ${videoStatus === 'ready' && (
             html`<div style=${{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap:'2px' }}>
               ${videos.map((v, i) => (
-                html`<div key=${i} onClick=${() => setLightbox(i)} className="video-card">
+                html`<div key=${i} ...${pressable(() => setLightbox(i))} className="video-card">
                   <div style=${{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px' }}>
                     <div className="play-circle">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="rgba(247,245,240,0.9)">
@@ -970,10 +1011,10 @@ const Optagelser = () => {
           ${videos.length > 1 && (
             html`<div style=${{ position:'absolute', bottom:'24px', display:'flex', gap:'12px' }}>
               ${[
-                { dir:-1, glyph:'‹' },
-                { dir: 1, glyph:'›' },
-              ].map(({ dir, glyph }) => (
-                html`<button key=${dir} onClick=${e => { e.stopPropagation(); stepVideo(dir); }}
+                { dir:-1, glyph:'‹', label:'Forrige video' },
+                { dir: 1, glyph:'›', label:'Næste video' },
+              ].map(({ dir, glyph, label }) => (
+                html`<button key=${dir} onClick=${e => { e.stopPropagation(); stepVideo(dir); }} aria-label=${label}
                   style=${{ border:'1px solid rgba(247,245,240,0.3)', color:'rgba(247,245,240,0.6)', fontFamily:'serif', fontSize:'20px', padding:'6px 16px' }}>
                   ${glyph}
                 </button>`
@@ -1028,8 +1069,8 @@ const OmKoret = () => {
           <div style=${{ marginTop:'28px', paddingTop:'24px', borderTop:'1px solid var(--border)' }}>
             <div className="eyebrow">Tidligere samarbejder</div>
             <div style=${{ marginTop:'12px', display:'flex', flexWrap:'wrap', gap:'8px' }}>
-              ${['Strygekvartetten AKELA', 'Barokorkestret Originalerne', 'Soprano Cassandra Lemoine', 'samarbejdet med mezzosopran Hanna Marie le Fevre og pianist Anna Flodmark'].map(s => (
-                html`<span key=${s} className="italic-meta" style=${{ fontSize:'14px' }}>${s} ·</span>`
+              ${['Strygekvartetten AKELA', 'Barokorkestret Originalerne', 'Sopran Cassandra Lemoine', 'Mezzosopran Hanna Marie le Fevre og pianist Anna Flodmark'].map((s, i, all) => (
+                html`<span key=${s} className="italic-meta" style=${{ fontSize:'14px' }}>${s}${i < all.length - 1 ? ' ·' : ''}</span>`
               ))}
             </div>
           </div>
@@ -1146,18 +1187,18 @@ const Kontakt = () => {
               setSent(true);
             }} style=${{ paddingTop:'32px' }}>
               ${[
-                { name:'navn', label:'Navn', type:'text' },
-                { name:'email', label:'Email', type:'email' },
+                { name:'navn', label:'Navn', type:'text', autoComplete:'name' },
+                { name:'email', label:'Email', type:'email', autoComplete:'email' },
               ].map(f => (
                 html`<div key=${f.name} style=${{ marginBottom:'28px' }}>
-                  <div className="kicker" style=${{ marginBottom:'8px' }}>${f.label}</div>
-                  <input type=${f.type} value=${form[f.name]} required className="field"
+                  <label htmlFor=${`kontakt-${f.name}`} className="kicker" style=${{ display:'block', marginBottom:'8px' }}>${f.label}</label>
+                  <input id=${`kontakt-${f.name}`} name=${f.name} type=${f.type} autoComplete=${f.autoComplete} value=${form[f.name]} required className="field"
                     onChange=${ev => setForm({...form, [f.name]: ev.target.value})} />
                 </div>`
               ))}
               <div style=${{ marginBottom:'36px' }}>
-                <div className="kicker" style=${{ marginBottom:'8px' }}>Besked</div>
-                <textarea value=${form.besked} required rows=${5} className="field field-area"
+                <label htmlFor="kontakt-besked" className="kicker" style=${{ display:'block', marginBottom:'8px' }}>Besked</label>
+                <textarea id="kontakt-besked" name="besked" value=${form.besked} required rows=${5} className="field field-area"
                   onChange=${ev => setForm({...form, besked: ev.target.value})} />
               </div>
               <button type="submit" className="btn btn-light" style=${{ padding:'14px 40px' }}>Send besked</button>
