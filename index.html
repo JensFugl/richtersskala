@@ -220,7 +220,9 @@ function copenhagenTime(year, month, day, h, m) {
   return new Date(asUtc - offset);
 }
 
-const hasTime = ev => /^\d{1,2}:\d{2}$/.test(ev.time || '');
+// `time` is "19:30" or a range like "16:00-17:00"
+const TIME_RE = /^(\d{1,2}):(\d{2})(?:\s*[–—-]\s*(\d{1,2}):(\d{2}))?$/;
+const hasTime = ev => TIME_RE.test(ev.time || '');
 
 function eventStartDate(ev) {
   const { day, month, year } = parseDanishDate(ev.date);
@@ -250,7 +252,7 @@ const ymd = (d, sep = '') =>
 
 const utcStamp = d => d.toISOString().replace(/[-:]|\.\d{3}/g, '');
 
-// concerts.json has no end time, so timed calendar entries assume this length
+// Timed calendar entries assume this length when concerts.json gives no end time
 const CONCERT_HOURS = 2;
 
 // All-day entries when the time is TBA or the event spans several days
@@ -259,7 +261,9 @@ function eventDates(ev) {
   if (!hasTime(ev) || lastDayOf(ev, day) !== day)
     return { allDay: true, dtStart: ymd(new Date(year, month - 1, day)), dtEnd: ymd(eventEndDate(ev)) };
   const start = eventStartDate(ev);
-  return { allDay: false, dtStart: utcStamp(start), dtEnd: utcStamp(new Date(start.getTime() + CONCERT_HOURS * 3600e3)) };
+  const [, , , endH, endM] = ev.time.match(TIME_RE);
+  const end = endH ? copenhagenTime(year, month, day, +endH, +endM) : new Date(start.getTime() + CONCERT_HOURS * 3600e3);
+  return { allDay: false, dtStart: utcStamp(start), dtEnd: utcStamp(end) };
 }
 
 const eventLocation = ev => [ev.venue, ev.address].filter(Boolean).join(', ');
